@@ -10,6 +10,7 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import messagebox, ttk
 
+from app_runtime import ensure_user_config, get_bundle_dir, get_install_dir, is_frozen, resolve_user_path
 from clicer import ACTION_TEMPLATES, DEFAULT_CONFIG
 
 try:
@@ -20,8 +21,9 @@ except ImportError:  # pragma: no cover
 
 
 BASE_DIR = Path(__file__).resolve().parent
-CONFIG_PATH = BASE_DIR / "config.json"
+CONFIG_PATH = ensure_user_config(DEFAULT_CONFIG)
 SCRIPT_PATH = BASE_DIR / "clicer.py"
+ICON_PATH = get_bundle_dir() / "assets" / "emulation-work.ico"
 
 TYPE_LABELS = {
     "switch_tab": "Переключить вкладку",
@@ -271,6 +273,7 @@ class App:
     def __init__(self, root):
         self.root = root
         self.root.title("Эмуляция работы")
+        self._set_window_icon()
         self.root.geometry("1200x820")
         self.process = None
         self.actions = []
@@ -295,6 +298,14 @@ class App:
         self.load_config(False)
         self.root.after(120, self._flush_logs)
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
+
+    def _set_window_icon(self):
+        if not ICON_PATH.exists():
+            return
+        try:
+            self.root.iconbitmap(default=str(ICON_PATH))
+        except tk.TclError:
+            pass
 
     def _build(self):
         top = ttk.Frame(self.root, padding=14)
@@ -481,7 +492,7 @@ class App:
             return False
         with CONFIG_PATH.open("w", encoding="utf-8") as f:
             json.dump(cfg, f, ensure_ascii=False, indent=2)
-        self.append_log(f"Конфиг сохранен в {CONFIG_PATH.name}\n")
+        self.append_log(f"Конфиг сохранен в {CONFIG_PATH}\n")
         self.status.configure(text="Конфиг сохранен")
         return True
 
@@ -682,14 +693,19 @@ class App:
             return
         if not self.save_config():
             return
-        python_exe = Path(sys.executable)
-        if python_exe.name.lower() == "pythonw.exe":
-            candidate = python_exe.with_name("python.exe")
-            if candidate.exists():
-                python_exe = candidate
-        cmd = [str(python_exe), str(SCRIPT_PATH), "--config", str(CONFIG_PATH), "--no-prompt"]
+        if is_frozen():
+            cmd = [str(Path(sys.executable)), "--run-automation", "--config", str(CONFIG_PATH), "--no-prompt"]
+            working_dir = get_install_dir()
+        else:
+            python_exe = Path(sys.executable)
+            if python_exe.name.lower() == "pythonw.exe":
+                candidate = python_exe.with_name("python.exe")
+                if candidate.exists():
+                    python_exe = candidate
+            cmd = [str(python_exe), str(SCRIPT_PATH), "--config", str(CONFIG_PATH), "--no-prompt"]
+            working_dir = BASE_DIR
         kwargs = {
-            "cwd": BASE_DIR,
+            "cwd": working_dir,
             "stdout": subprocess.PIPE,
             "stderr": subprocess.STDOUT,
             "text": True,
@@ -720,7 +736,7 @@ class App:
         self.status.configure(text="Остановка процесса...")
 
     def open_logs(self):
-        path = BASE_DIR / (self.vars["log_dir"].get().strip() or "logs")
+        path = resolve_user_path(self.vars["log_dir"].get().strip() or "logs")
         path.mkdir(parents=True, exist_ok=True)
         os.startfile(path)
 

@@ -63,3 +63,23 @@
 ```powershell
 .\register-task.ps1 -TaskName AutoClicer -At 09:00
 ```
+
+## Сборка Windows
+
+Чтобы собрать автономную Windows-версию без зависимости от установленного Python:
+
+```powershell
+.\build-installer.ps1
+```
+
+После сборки появятся файлы:
+
+- `dist\EmulationWork.exe` - переносимый `exe`;
+- `dist\installer\EmulationWorkSetup.exe` - установщик Windows.
+
+Установленная версия хранит пользовательские данные отдельно от папки программы:
+
+- конфиг: `%LOCALAPPDATA%\EmulationWork\config.json`
+- логи: `%LOCALAPPDATA%\EmulationWork\logs\`
+
+Установщик ставит приложение в профиль текущего пользователя, поэтому администраторские права не требуются.

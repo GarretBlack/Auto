@@ -13,6 +13,8 @@ from typing import Any
 
 import pyautogui
 
+from app_runtime import ensure_user_config, resolve_user_path
+
 
 LOGGER = logging.getLogger("clicer")
 
@@ -182,6 +184,8 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "actions": DEFAULT_ACTIONS,
 }
 
+DEFAULT_CONFIG_PATH = ensure_user_config(DEFAULT_CONFIG)
+
 
 @dataclass
 class ScriptConfig:
@@ -200,7 +204,7 @@ class ScriptConfig:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Исполнение сценария автоматизации из JSON-конфига.")
-    parser.add_argument("--config", default="config.json", help="Путь к JSON-конфигу.")
+    parser.add_argument("--config", default=str(DEFAULT_CONFIG_PATH), help="Путь к JSON-конфигу.")
     parser.add_argument("--startup-delay", type=int, default=None, help="Задержка перед стартом в секундах.")
     parser.add_argument("--cycles", type=int, default=None, help="Ограничение числа циклов.")
     parser.add_argument("--log-level", default=None, help="Уровень логирования: DEBUG, INFO, WARNING, ERROR.")
@@ -222,8 +226,12 @@ def load_json_config(config_path: str) -> dict[str, Any]:
 
 
 def build_config(args: argparse.Namespace) -> ScriptConfig:
+    config_path = Path(args.config).expanduser()
+    if not config_path.is_absolute():
+        config_path = resolve_user_path(config_path)
+
     raw_config = copy.deepcopy(DEFAULT_CONFIG)
-    file_config = load_json_config(args.config)
+    file_config = load_json_config(str(config_path))
     raw_config.update({k: v for k, v in file_config.items() if k != "actions"})
     if "actions" in file_config:
         raw_config["actions"] = file_config["actions"]
@@ -259,7 +267,7 @@ def build_config(args: argparse.Namespace) -> ScriptConfig:
         log_file=str(raw_config.get("log_file", "clicer.log")),
         log_level=str(raw_config.get("log_level", "INFO")).upper(),
         actions=actions,
-        config_path=args.config,
+        config_path=str(config_path),
     )
 
 
@@ -285,7 +293,7 @@ def normalize_actions(actions: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def configure_runtime(config: ScriptConfig) -> None:
-    log_dir = Path(config.log_dir)
+    log_dir = resolve_user_path(config.log_dir)
     log_dir.mkdir(parents=True, exist_ok=True)
 
     formatter = logging.Formatter("%(asctime)s | %(levelname)s | %(message)s")
