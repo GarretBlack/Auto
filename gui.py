@@ -684,12 +684,12 @@ class App:
         dialog.title("Новое действие")
         dialog.transient(self.root)
         dialog.grab_set()
-        value = tk.StringVar(value="scroll")
+        value = tk.StringVar(value=TYPE_LABELS["scroll"])
         ttk.Label(dialog, text="Тип действия:", padding=10).pack(anchor="w")
-        ttk.Combobox(dialog, textvariable=value, values=tuple(TYPE_LABELS.keys()), state="readonly").pack(fill="x", padx=10)
+        ttk.Combobox(dialog, textvariable=value, values=tuple(TYPE_LABELS.values()), state="readonly").pack(fill="x", padx=10)
 
         def accept():
-            dialog.result = value.get()
+            dialog.result = next((key for key, label in TYPE_LABELS.items() if label == value.get()), None)
             dialog.destroy()
 
         ttk.Button(dialog, text="Добавить", command=accept).pack(padx=10, pady=10, anchor="w")
