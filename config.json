@@ -59,6 +59,7 @@
       "enabled": true,
       "x_margin": 150,
       "y_margin": 120,
+      "human_like": true,
       "duration_min": 0.8,
       "duration_max": 1.4
     },

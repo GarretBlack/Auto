@@ -78,6 +78,7 @@ FIELDS = {
         ("enabled", "Включено", "bool"),
         ("x_margin", "Отступ X", "int"),
         ("y_margin", "Отступ Y", "int"),
+        ("human_like", "Человеческая имитация", "bool"),
         ("duration_min", "Длит. мин", "float"),
         ("duration_max", "Длит. макс", "float"),
     ],
@@ -298,6 +299,7 @@ class App:
     def _build(self):
         top = ttk.Frame(self.root, padding=14)
         top.pack(fill="both", expand=True)
+
         ttk.Label(top, text="Эмуляция работы", font=("Segoe UI Semibold", 19)).pack(anchor="w")
         ttk.Label(
             top,

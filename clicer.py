@@ -57,6 +57,7 @@ ACTION_TEMPLATES: dict[str, dict[str, Any]] = {
         "enabled": True,
         "x_margin": 100,
         "y_margin": 100,
+        "human_like": True,
         "duration_min": 0.8,
         "duration_max": 1.4,
     },
@@ -151,6 +152,7 @@ DEFAULT_ACTIONS = [
         "label": "Сменить фокус мыши",
         "x_margin": 150,
         "y_margin": 120,
+        "human_like": True,
         "duration_min": 0.8,
         "duration_max": 1.4,
     },
@@ -353,6 +355,35 @@ def human_move(target_x: int, target_y: int, duration: float, config: ScriptConf
     return False
 
 
+def straight_move(target_x: int, target_y: int, duration: float, config: ScriptConfig) -> bool:
+    if check_panic_exit(config):
+        return True
+    pyautogui.moveTo(target_x, target_y, duration=duration, tween=pyautogui.linear)
+    return check_panic_exit(config)
+
+
+def human_like_move(target_x: int, target_y: int, duration: float, config: ScriptConfig) -> bool:
+    current_x, current_y = pyautogui.position()
+    delta_x = target_x - current_x
+    delta_y = target_y - current_y
+    waypoints = []
+
+    for fraction in (0.22, 0.47, 0.73):
+        waypoint_x = int(current_x + delta_x * fraction + random.randint(-45, 45))
+        waypoint_y = int(current_y + delta_y * fraction + random.randint(-45, 45))
+        waypoints.append((waypoint_x, waypoint_y))
+
+    waypoints.append((target_x, target_y))
+    segment_duration = max(0.08, duration / len(waypoints))
+
+    for point_x, point_y in waypoints:
+        if check_panic_exit(config):
+            return True
+        pyautogui.moveTo(point_x, point_y, duration=segment_duration, tween=pyautogui.easeInOutQuad)
+
+    return check_panic_exit(config)
+
+
 def get_safe_point(action: dict[str, Any]) -> tuple[int, int]:
     screen_width, screen_height = pyautogui.size()
     x_margin = max(0, int(action.get("x_margin", 100)))
@@ -423,7 +454,9 @@ def execute_action(action: dict[str, Any], config: ScriptConfig) -> bool:
     if action_type == "move_random":
         target_x, target_y = get_safe_point(action)
         duration = random_float(action.get("duration_min", 0.8), action.get("duration_max", 1.4))
-        return human_move(target_x, target_y, duration, config)
+        if action.get("human_like", False):
+            return human_like_move(target_x, target_y, duration, config)
+        return straight_move(target_x, target_y, duration, config)
 
     if action_type == "mouse_move":
         target_x = int(action.get("x", 0))
