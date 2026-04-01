@@ -1,8 +1,16 @@
 $OutputEncoding = [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new()
 
-if (-not (Test-Path ".\.venv\Scripts\python.exe")) {
-    Write-Host "Виртуальное окружение не найдено. Сначала выполните .\setup.ps1"
+$pythonw = Join-Path $PSScriptRoot ".venv\Scripts\pythonw.exe"
+$gui = Join-Path $PSScriptRoot "gui.pyw"
+
+if (-not (Test-Path $pythonw)) {
+    Write-Host "Не найден .\.venv\Scripts\pythonw.exe. Сначала выполните .\setup.ps1"
     exit 1
 }
 
-& ".\.venv\Scripts\python.exe" ".\gui.py"
+if (-not (Test-Path $gui)) {
+    Write-Host "Не найден $gui"
+    exit 1
+}
+
+Start-Process -FilePath $pythonw -ArgumentList $gui -WorkingDirectory $PSScriptRoot

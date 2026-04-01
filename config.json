@@ -1,13 +1,81 @@
 {
   "startup_delay": 5,
   "cycles": 1,
-  "wait_min": 40,
-  "wait_max": 110,
-  "read_steps_min": 10,
-  "read_steps_max": 18,
   "failsafe_enabled": true,
   "prompt_on_exit": false,
   "log_dir": "logs",
   "log_file": "clicer.log",
-  "log_level": "INFO"
+  "log_level": "INFO",
+  "actions": [
+    {
+      "type": "switch_tab",
+      "label": "Переключить вкладку",
+      "enabled": true,
+      "repeat_min": 1,
+      "repeat_max": 1,
+      "sleep_after_min": 0.4,
+      "sleep_after_max": 0.7
+    },
+    {
+      "type": "scroll",
+      "label": "Вернуться вверх",
+      "enabled": true,
+      "repeat_min": 4,
+      "repeat_max": 7,
+      "amount_min": 250,
+      "amount_max": 300,
+      "sleep_min": 0.1,
+      "sleep_max": 0.3,
+      "micro_move_chance": 0.0
+    },
+    {
+      "type": "pause",
+      "label": "Короткая пауза",
+      "enabled": true,
+      "duration_min": 1.5,
+      "duration_max": 1.5
+    },
+    {
+      "type": "scroll",
+      "label": "Чтение страницы",
+      "enabled": true,
+      "repeat_min": 10,
+      "repeat_max": 18,
+      "amount_min": -100,
+      "amount_max": -100,
+      "sleep_min": 1.0,
+      "sleep_max": 2.5,
+      "micro_move_chance": 0.8,
+      "micro_move_x_min": -80,
+      "micro_move_x_max": 80,
+      "micro_move_y_min": -20,
+      "micro_move_y_max": 20,
+      "micro_move_duration_min": 0.4,
+      "micro_move_duration_max": 0.8
+    },
+    {
+      "type": "move_random",
+      "label": "Сменить фокус мыши",
+      "enabled": true,
+      "x_margin": 150,
+      "y_margin": 120,
+      "duration_min": 0.8,
+      "duration_max": 1.4
+    },
+    {
+      "type": "keypress",
+      "label": "Нажать Shift",
+      "enabled": true,
+      "key": "shift",
+      "sleep_after_min": 0.0,
+      "sleep_after_max": 0.1
+    },
+    {
+      "type": "wait",
+      "label": "Ожидание между циклами",
+      "enabled": true,
+      "duration_min": 40.0,
+      "duration_max": 110.0
+    }
+  ]
 }
