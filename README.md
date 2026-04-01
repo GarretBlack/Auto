@@ -76,11 +76,6 @@
 
 - `dist\EmulationWork.exe` - переносимый `exe`;
 - `dist\installer\EmulationWorkSetup.exe` - установщик Windows.
-- `artifacts\EmulationWorkSetup.exe` - копия готового установщика, добавляемая в репозиторий.
-
-Если не хочется собирать проект локально, готовый установщик можно взять прямо из репозитория:
-
-- в GitHub: `https://github.com/GarretBlack/Auto/blob/main/artifacts/EmulationWorkSetup.exe`
 
 Установленная версия хранит пользовательские данные отдельно от папки программы:
 
@@ -88,3 +83,10 @@
 - логи: `%LOCALAPPDATA%\EmulationWork\logs\`
 
 Установщик ставит приложение в профиль текущего пользователя, поэтому администраторские права не требуются.
+
+## Готовый установщик
+
+В репозитории хранится готовый установщик Windows, который можно скачать без локальной сборки:
+
+- `artifacts\EmulationWorkSetup.exe` - копия актуального установщика, добавляемая в репозиторий.
+- GitHub: `https://github.com/GarretBlack/Auto/blob/main/artifacts/EmulationWorkSetup.exe`
