@@ -711,6 +711,11 @@ class App:
             "text": True,
             "encoding": "utf-8",
             "errors": "replace",
+            "env": {
+                **os.environ,
+                "PYTHONIOENCODING": "utf-8",
+                "PYTHONUTF8": "1",
+            },
         }
         if os.name == "nt":
             kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW

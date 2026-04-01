@@ -3,6 +3,7 @@ import copy
 import json
 import logging
 import random
+import sys
 import time
 import traceback
 from dataclasses import dataclass
@@ -292,6 +293,18 @@ def normalize_actions(actions: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return normalized
 
 
+def configure_stdio() -> None:
+    for stream_name in ("stdout", "stderr"):
+        stream = getattr(sys, stream_name, None)
+        if stream is None or not hasattr(stream, "reconfigure"):
+            continue
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except ValueError:
+            # Ignore already-closed redirected streams.
+            continue
+
+
 def configure_runtime(config: ScriptConfig) -> None:
     log_dir = resolve_user_path(config.log_dir)
     log_dir.mkdir(parents=True, exist_ok=True)
@@ -299,7 +312,7 @@ def configure_runtime(config: ScriptConfig) -> None:
     formatter = logging.Formatter("%(asctime)s | %(levelname)s | %(message)s")
     level = getattr(logging, config.log_level, logging.INFO)
 
-    console_handler = logging.StreamHandler()
+    console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(formatter)
 
     file_handler = RotatingFileHandler(
@@ -544,6 +557,7 @@ def print_summary(total_cycles: int, total_actions: int, elapsed_seconds: float)
 
 def main() -> int:
     try:
+        configure_stdio()
         config = build_config(parse_args())
         configure_runtime(config)
         total_cycles, total_actions, elapsed_seconds = run(config)
