@@ -22,6 +22,7 @@ except ImportError:  # pragma: no cover
 BASE_DIR = Path(__file__).resolve().parent
 CONFIG_PATH = BASE_DIR / "config.json"
 SCRIPT_PATH = BASE_DIR / "clicer.py"
+
 TYPE_LABELS = {
     "switch_tab": "Переключить вкладку",
     "scroll": "Прокрутка",
@@ -30,41 +31,109 @@ TYPE_LABELS = {
     "move_random": "Случайное движение мыши",
     "mouse_move": "Перемещение мыши",
     "click": "Клик мышью",
-    "keypress": "Клавиша",
+    "keypress": "Нажатие клавиши",
     "hotkey": "Горячая клавиша",
 }
+
 FIELDS = {
-    "switch_tab": [("label", "Название", "str"), ("enabled", "Включено", "bool"), ("repeat_min", "Повтор мин", "int"), ("repeat_max", "Повтор макс", "int"), ("sleep_after_min", "Пауза мин", "float"), ("sleep_after_max", "Пауза макс", "float")],
-    "scroll": [("label", "Название", "str"), ("enabled", "Включено", "bool"), ("repeat_min", "Повтор мин", "int"), ("repeat_max", "Повтор макс", "int"), ("amount_min", "Скролл мин", "int"), ("amount_max", "Скролл макс", "int"), ("sleep_min", "Пауза мин", "float"), ("sleep_max", "Пауза макс", "float"), ("micro_move_chance", "Шанс микродвижения", "float"), ("micro_move_x_min", "Смещение X мин", "int"), ("micro_move_x_max", "Смещение X макс", "int"), ("micro_move_y_min", "Смещение Y мин", "int"), ("micro_move_y_max", "Смещение Y макс", "int"), ("micro_move_duration_min", "Длит. микродв. мин", "float"), ("micro_move_duration_max", "Длит. микродв. макс", "float")],
-    "pause": [("label", "Название", "str"), ("enabled", "Включено", "bool"), ("duration_min", "Длительность мин", "float"), ("duration_max", "Длительность макс", "float")],
-    "wait": [("label", "Название", "str"), ("enabled", "Включено", "bool"), ("duration_min", "Ожидание мин", "float"), ("duration_max", "Ожидание макс", "float")],
-    "move_random": [("label", "Название", "str"), ("enabled", "Включено", "bool"), ("x_margin", "Отступ X", "int"), ("y_margin", "Отступ Y", "int"), ("duration_min", "Длит. мин", "float"), ("duration_max", "Длит. макс", "float")],
-    "mouse_move": [("label", "Название", "str"), ("enabled", "Включено", "bool"), ("x", "X", "int"), ("y", "Y", "int"), ("duration_min", "Длит. мин", "float"), ("duration_max", "Длит. макс", "float")],
-    "click": [("label", "Название", "str"), ("enabled", "Включено", "bool"), ("x", "X", "optional_int"), ("y", "Y", "optional_int"), ("button", "Кнопка", "combo", ("left", "right", "middle")), ("clicks", "Кликов", "int"), ("interval", "Интервал", "float")],
-    "keypress": [("label", "Название", "str"), ("enabled", "Включено", "bool"), ("key", "Клавиша", "str"), ("sleep_after_min", "Пауза мин", "float"), ("sleep_after_max", "Пауза макс", "float")],
-    "hotkey": [("label", "Название", "str"), ("enabled", "Включено", "bool"), ("keys", "Клавиши через запятую", "csv"), ("sleep_after_min", "Пауза мин", "float"), ("sleep_after_max", "Пауза макс", "float")],
+    "switch_tab": [
+        ("label", "Название", "str"),
+        ("enabled", "Включено", "bool"),
+        ("repeat_min", "Повтор минимум", "int"),
+        ("repeat_max", "Повтор максимум", "int"),
+        ("sleep_after_min", "Пауза после минимум", "float"),
+        ("sleep_after_max", "Пауза после максимум", "float"),
+    ],
+    "scroll": [
+        ("label", "Название", "str"),
+        ("enabled", "Включено", "bool"),
+        ("repeat_min", "Повтор минимум", "int"),
+        ("repeat_max", "Повтор максимум", "int"),
+        ("amount_min", "Прокрутка минимум", "int"),
+        ("amount_max", "Прокрутка максимум", "int"),
+        ("sleep_min", "Пауза минимум", "float"),
+        ("sleep_max", "Пауза максимум", "float"),
+        ("micro_move_chance", "Шанс микродвижения", "float"),
+        ("micro_move_x_min", "Смещение X минимум", "int"),
+        ("micro_move_x_max", "Смещение X максимум", "int"),
+        ("micro_move_y_min", "Смещение Y минимум", "int"),
+        ("micro_move_y_max", "Смещение Y максимум", "int"),
+        ("micro_move_duration_min", "Длительность микродвижения минимум", "float"),
+        ("micro_move_duration_max", "Длительность микродвижения максимум", "float"),
+    ],
+    "pause": [
+        ("label", "Название", "str"),
+        ("enabled", "Включено", "bool"),
+        ("duration_min", "Длительность минимум", "float"),
+        ("duration_max", "Длительность максимум", "float"),
+    ],
+    "wait": [
+        ("label", "Название", "str"),
+        ("enabled", "Включено", "bool"),
+        ("duration_min", "Ожидание минимум", "float"),
+        ("duration_max", "Ожидание максимум", "float"),
+    ],
+    "move_random": [
+        ("label", "Название", "str"),
+        ("enabled", "Включено", "bool"),
+        ("x_margin", "Отступ X", "int"),
+        ("y_margin", "Отступ Y", "int"),
+        ("duration_min", "Длительность минимум", "float"),
+        ("duration_max", "Длительность максимум", "float"),
+    ],
+    "mouse_move": [
+        ("label", "Название", "str"),
+        ("enabled", "Включено", "bool"),
+        ("x", "X", "int"),
+        ("y", "Y", "int"),
+        ("duration_min", "Длительность минимум", "float"),
+        ("duration_max", "Длительность максимум", "float"),
+    ],
+    "click": [
+        ("label", "Название", "str"),
+        ("enabled", "Включено", "bool"),
+        ("x", "X", "optional_int"),
+        ("y", "Y", "optional_int"),
+        ("button", "Кнопка", "combo", ("left", "right", "middle")),
+        ("clicks", "Количество кликов", "int"),
+        ("interval", "Интервал", "float"),
+    ],
+    "keypress": [
+        ("label", "Название", "str"),
+        ("enabled", "Включено", "bool"),
+        ("key", "Клавиша", "str"),
+        ("sleep_after_min", "Пауза после минимум", "float"),
+        ("sleep_after_max", "Пауза после максимум", "float"),
+    ],
+    "hotkey": [
+        ("label", "Название", "str"),
+        ("enabled", "Включено", "bool"),
+        ("keys", "Клавиши через запятую", "csv"),
+        ("sleep_after_min", "Пауза после минимум", "float"),
+        ("sleep_after_max", "Пауза после максимум", "float"),
+    ],
 }
 
 
 class Recorder:
-    def __init__(self, done):
-        self.done = done
+    def __init__(self, done_callback):
+        self.done_callback = done_callback
         self.actions = []
-        self.last_time = None
+        self.last_event_time = None
+        self.recording = False
         self.mouse_listener = None
         self.keyboard_listener = None
-        self.modifiers = []
         self.pressed = set()
-        self.recording = False
+        self.modifiers = []
 
     def start(self):
         if keyboard is None or mouse is None:
             raise RuntimeError("Для записи нужна библиотека pynput.")
         self.actions = []
-        self.last_time = None
-        self.modifiers = []
-        self.pressed = set()
+        self.last_event_time = None
         self.recording = True
+        self.pressed.clear()
+        self.modifiers.clear()
         self.mouse_listener = mouse.Listener(on_click=self.on_click, on_scroll=self.on_scroll)
         self.keyboard_listener = keyboard.Listener(on_press=self.on_press, on_release=self.on_release)
         self.mouse_listener.start()
@@ -78,31 +147,63 @@ class Recorder:
             self.mouse_listener.stop()
         if self.keyboard_listener:
             self.keyboard_listener.stop()
-        self.done(copy.deepcopy(self.actions))
+        self.done_callback(copy.deepcopy(self.actions))
 
-    def _pause(self):
+    def append_pause(self):
         now = time.monotonic()
-        if self.last_time is not None:
-            delta = round(now - self.last_time, 2)
+        if self.last_event_time is not None:
+            delta = round(now - self.last_event_time, 2)
             if delta >= 0.15:
-                self.actions.append({"type": "pause", "label": "Пауза из записи", "enabled": True, "duration_min": delta, "duration_max": delta})
-        self.last_time = now
+                self.actions.append(
+                    {
+                        "type": "pause",
+                        "label": "Пауза из записи",
+                        "enabled": True,
+                        "duration_min": delta,
+                        "duration_max": delta,
+                    }
+                )
+        self.last_event_time = now
 
     def on_click(self, x, y, button, pressed):
         if self.recording and pressed:
-            self._pause()
-            self.actions.append({"type": "click", "label": "Клик из записи", "enabled": True, "x": int(x), "y": int(y), "button": getattr(button, "name", "left"), "clicks": 1, "interval": 0.0})
+            self.append_pause()
+            self.actions.append(
+                {
+                    "type": "click",
+                    "label": "Клик из записи",
+                    "enabled": True,
+                    "x": int(x),
+                    "y": int(y),
+                    "button": getattr(button, "name", "left"),
+                    "clicks": 1,
+                    "interval": 0.0,
+                }
+            )
 
     def on_scroll(self, x, y, dx, dy):
         if self.recording:
-            self._pause()
+            self.append_pause()
             amount = int(dy * 120)
-            self.actions.append({"type": "scroll", "label": "Прокрутка из записи", "enabled": True, "repeat_min": 1, "repeat_max": 1, "amount_min": amount, "amount_max": amount, "sleep_min": 0.0, "sleep_max": 0.0, "micro_move_chance": 0.0})
+            self.actions.append(
+                {
+                    "type": "scroll",
+                    "label": "Прокрутка из записи",
+                    "enabled": True,
+                    "repeat_min": 1,
+                    "repeat_max": 1,
+                    "amount_min": amount,
+                    "amount_max": amount,
+                    "sleep_min": 0.0,
+                    "sleep_max": 0.0,
+                    "micro_move_chance": 0.0,
+                }
+            )
 
     def on_press(self, key):
         if not self.recording:
             return
-        name = self._key_name(key)
+        name = self.normalize_key(key)
         if not name:
             return
         if name == "f8":
@@ -115,33 +216,62 @@ class Recorder:
             if name not in self.modifiers:
                 self.modifiers.append(name)
             return
-        self._pause()
+        self.append_pause()
         if self.modifiers:
-            self.actions.append({"type": "hotkey", "label": "Горячая клавиша из записи", "enabled": True, "keys": [*self.modifiers, name], "sleep_after_min": 0.0, "sleep_after_max": 0.1})
+            self.actions.append(
+                {
+                    "type": "hotkey",
+                    "label": "Горячая клавиша из записи",
+                    "enabled": True,
+                    "keys": [*self.modifiers, name],
+                    "sleep_after_min": 0.0,
+                    "sleep_after_max": 0.1,
+                }
+            )
         else:
-            self.actions.append({"type": "keypress", "label": "Клавиша из записи", "enabled": True, "key": name, "sleep_after_min": 0.0, "sleep_after_max": 0.1})
+            self.actions.append(
+                {
+                    "type": "keypress",
+                    "label": "Клавиша из записи",
+                    "enabled": True,
+                    "key": name,
+                    "sleep_after_min": 0.0,
+                    "sleep_after_max": 0.1,
+                }
+            )
 
     def on_release(self, key):
-        name = self._key_name(key)
+        name = self.normalize_key(key)
         if name:
             self.pressed.discard(name)
             self.modifiers = [item for item in self.modifiers if item != name]
 
     @staticmethod
-    def _key_name(key):
+    def normalize_key(key):
         if keyboard is None:
             return None
         if isinstance(key, keyboard.KeyCode):
             return key.char.lower() if key.char else None
-        aliases = {"ctrl_l": "ctrl", "ctrl_r": "ctrl", "alt_l": "alt", "alt_r": "alt", "shift_l": "shift", "shift_r": "shift", "cmd_l": "win", "cmd_r": "win", "cmd": "win"}
-        return aliases.get(getattr(key, "name", None), getattr(key, "name", None))
+        aliases = {
+            "ctrl_l": "ctrl",
+            "ctrl_r": "ctrl",
+            "alt_l": "alt",
+            "alt_r": "alt",
+            "shift_l": "shift",
+            "shift_r": "shift",
+            "cmd_l": "win",
+            "cmd_r": "win",
+            "cmd": "win",
+        }
+        raw_name = getattr(key, "name", None)
+        return aliases.get(raw_name, raw_name)
 
 
 class App:
     def __init__(self, root):
         self.root = root
-        self.root.title("Auto Scenario Studio")
-        self.root.geometry("1200x820")
+        self.root.title("Эмуляция работы")
+        self.root.geometry("1200x860")
         self.process = None
         self.actions = []
         self.selected = None
@@ -149,81 +279,133 @@ class App:
         self.log_queue = queue.Queue()
         self.recorder = None
         self.recording = False
-        self.vars = {name: var for name, var in [("startup_delay", tk.StringVar()), ("cycles", tk.StringVar()), ("log_dir", tk.StringVar()), ("log_file", tk.StringVar()), ("log_level", tk.StringVar()), ("failsafe_enabled", tk.BooleanVar()), ("prompt_on_exit", tk.BooleanVar())]}
-        self._build()
+        self.vars = {
+            "startup_delay": tk.StringVar(),
+            "cycles": tk.StringVar(),
+            "log_dir": tk.StringVar(),
+            "log_file": tk.StringVar(),
+            "log_level": tk.StringVar(),
+            "failsafe_enabled": tk.BooleanVar(),
+            "prompt_on_exit": tk.BooleanVar(),
+        }
+        self.build()
         self.load_config(False)
-        self.root.after(120, self._flush_logs)
+        self.root.after(120, self.flush_logs)
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
 
-    def _build(self):
+    def build(self):
         top = ttk.Frame(self.root, padding=14)
         top.pack(fill="both", expand=True)
-        ttk.Label(top, text="Auto Scenario Studio", font=("Segoe UI Semibold", 19)).pack(anchor="w")
-        ttk.Label(top, text="Без отдельной консоли, с редактированием сценария и записью действий.", foreground="#475569").pack(anchor="w", pady=(2, 12))
+        top.columnconfigure(0, weight=1)
+        top.rowconfigure(3, weight=1)
+        top.rowconfigure(4, weight=1)
+
+        ttk.Label(top, text="Эмуляция работы", font=("Segoe UI Semibold", 19)).grid(row=0, column=0, sticky="w")
+        ttk.Label(top, text="Настройка сценария и запись действий в одном окне.", foreground="#475569").grid(
+            row=1, column=0, sticky="w", pady=(2, 12)
+        )
+
         bar = ttk.Frame(top)
-        bar.pack(fill="x", pady=(0, 12))
-        for text, cmd in [("Загрузить", lambda: self.load_config(True)), ("Сохранить", self.save_config), ("Старт", self.start_process), ("Стоп", self.stop_process), ("Открыть логи", self.open_logs)]:
-            ttk.Button(bar, text=text, command=cmd).pack(side="left", padx=(0, 8))
+        bar.grid(row=0, column=0, sticky="e")
+        for text, command in [
+            ("Загрузить", lambda: self.load_config(True)),
+            ("Сохранить", self.save_config),
+            ("Старт", self.start_process),
+            ("Стоп", self.stop_process),
+            ("Открыть логи", self.open_logs),
+        ]:
+            ttk.Button(bar, text=text, command=command).pack(side="left", padx=(0, 8))
         self.record_btn = ttk.Button(bar, text="Запись действий", command=self.toggle_recording)
         self.record_btn.pack(side="left")
         self.status = ttk.Label(bar, text="Готово")
         self.status.pack(side="right")
 
-        notebook = ttk.Notebook(top)
-        notebook.pack(fill="both", expand=True)
-        general = ttk.Frame(notebook, padding=12)
-        scenario = ttk.Frame(notebook, padding=12)
-        logs = ttk.Frame(notebook, padding=12)
-        notebook.add(general, text="Общие")
-        notebook.add(scenario, text="Сценарий")
-        notebook.add(logs, text="Лог")
+        general = ttk.LabelFrame(top, text="Настройки", padding=12)
+        general.grid(row=2, column=0, sticky="ew", pady=(0, 12))
+        general.columnconfigure(1, weight=1)
+        fields = [
+            ("startup_delay", "Задержка перед стартом"),
+            ("cycles", "Количество циклов"),
+            ("log_dir", "Папка логов"),
+            ("log_file", "Имя лог-файла"),
+        ]
+        for row, (name, label) in enumerate(fields):
+            ttk.Label(general, text=label).grid(row=row, column=0, sticky="w", padx=(0, 12), pady=6)
+            ttk.Entry(general, textvariable=self.vars[name]).grid(row=row, column=1, sticky="ew", pady=6)
+        ttk.Label(general, text="Уровень логирования").grid(row=4, column=0, sticky="w", padx=(0, 12), pady=6)
+        ttk.Combobox(
+            general,
+            textvariable=self.vars["log_level"],
+            values=("DEBUG", "INFO", "WARNING", "ERROR"),
+            state="readonly",
+        ).grid(row=4, column=1, sticky="ew", pady=6)
+        ttk.Checkbutton(general, text="Включить FailSafe", variable=self.vars["failsafe_enabled"]).grid(
+            row=5, column=0, columnspan=2, sticky="w", pady=(10, 4)
+        )
+        ttk.Checkbutton(general, text="Показывать ENTER после завершения", variable=self.vars["prompt_on_exit"]).grid(
+            row=6, column=0, columnspan=2, sticky="w"
+        )
 
-        form = ttk.LabelFrame(general, text="Настройки", padding=12)
-        form.pack(fill="x")
-        form.columnconfigure(1, weight=1)
-        items = [("startup_delay", "Задержка перед стартом"), ("cycles", "Количество циклов"), ("log_dir", "Папка логов"), ("log_file", "Имя лог-файла")]
-        for idx, (key, label) in enumerate(items):
-            ttk.Label(form, text=label).grid(row=idx, column=0, sticky="w", padx=(0, 12), pady=6)
-            ttk.Entry(form, textvariable=self.vars[key]).grid(row=idx, column=1, sticky="ew", pady=6)
-        ttk.Label(form, text="Уровень логирования").grid(row=4, column=0, sticky="w", padx=(0, 12), pady=6)
-        ttk.Combobox(form, textvariable=self.vars["log_level"], values=("DEBUG", "INFO", "WARNING", "ERROR"), state="readonly").grid(row=4, column=1, sticky="ew", pady=6)
-        ttk.Checkbutton(form, text="Включить FailSafe", variable=self.vars["failsafe_enabled"]).grid(row=5, column=0, columnspan=2, sticky="w", pady=(10, 4))
-        ttk.Checkbutton(form, text="Показывать ENTER после завершения", variable=self.vars["prompt_on_exit"]).grid(row=6, column=0, columnspan=2, sticky="w")
-
+        scenario = ttk.Frame(top)
+        scenario.grid(row=3, column=0, sticky="nsew", pady=(0, 12))
         scenario.columnconfigure(0, weight=1)
         scenario.columnconfigure(1, weight=1)
         scenario.rowconfigure(0, weight=1)
-        left = ttk.LabelFrame(scenario, text="Действия", padding=12)
-        right = ttk.LabelFrame(scenario, text="Параметры выбранного действия", padding=12)
+
+        left = ttk.LabelFrame(scenario, text="Сценарий", padding=12)
         left.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
-        right.grid(row=0, column=1, sticky="nsew", padx=(8, 0))
         left.columnconfigure(0, weight=1)
         left.rowconfigure(1, weight=1)
+
+        right = ttk.LabelFrame(scenario, text="Параметры действия", padding=12)
+        right.grid(row=0, column=1, sticky="nsew", padx=(8, 0))
         right.columnconfigure(1, weight=1)
 
-        btns = ttk.Frame(left)
-        btns.grid(row=0, column=0, sticky="ew", pady=(0, 8))
-        for text, cmd in [("Добавить", self.add_action), ("Дублировать", self.duplicate_action), ("Удалить", self.delete_action), ("Вверх", lambda: self.move_action(-1)), ("Вниз", lambda: self.move_action(1))]:
-            ttk.Button(btns, text=text, command=cmd).pack(side="left", padx=(0, 6))
+        buttons = ttk.Frame(left)
+        buttons.grid(row=0, column=0, sticky="ew", pady=(0, 8))
+        for text, command in [
+            ("Добавить", self.add_action),
+            ("Дублировать", self.duplicate_action),
+            ("Удалить", self.delete_action),
+            ("Вверх", lambda: self.move_action(-1)),
+            ("Вниз", lambda: self.move_action(1)),
+        ]:
+            ttk.Button(buttons, text=text, command=command).pack(side="left", padx=(0, 6))
 
         self.tree = ttk.Treeview(left, columns=("on", "type", "label"), show="headings", selectmode="browse")
-        self.tree.heading("on", text="On")
+        self.tree.heading("on", text="✓")
         self.tree.heading("type", text="Тип")
         self.tree.heading("label", text="Название")
         self.tree.column("on", width=55, anchor="center")
-        self.tree.column("type", width=160)
-        self.tree.column("label", width=280)
+        self.tree.column("type", width=180)
+        self.tree.column("label", width=300)
         self.tree.grid(row=1, column=0, sticky="nsew")
         self.tree.bind("<<TreeviewSelect>>", self.on_select)
 
-        ttk.Label(right, text="F8 останавливает запись. Записанные шаги добавляются в конец сценария.").grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 10))
+        ttk.Label(right, text="F8 останавливает запись. Записанные шаги добавляются в конец сценария.").grid(
+            row=0, column=0, columnspan=2, sticky="w", pady=(0, 10)
+        )
         self.details = ttk.Frame(right)
         self.details.grid(row=1, column=0, columnspan=2, sticky="nsew")
         self.details.columnconfigure(1, weight=1)
-        ttk.Button(right, text="Применить изменения", command=self.apply_selected).grid(row=2, column=0, sticky="w", pady=(10, 0))
+        ttk.Button(right, text="Применить изменения", command=self.apply_selected).grid(
+            row=2, column=0, sticky="w", pady=(10, 0)
+        )
 
-        self.log = tk.Text(logs, bg="#0f172a", fg="#dbeafe", insertbackground="#dbeafe", font=("Consolas", 10), padx=10, pady=10)
-        self.log.pack(fill="both", expand=True)
+        log_frame = ttk.LabelFrame(top, text="Лог", padding=12)
+        log_frame.grid(row=4, column=0, sticky="nsew")
+        log_frame.columnconfigure(0, weight=1)
+        log_frame.rowconfigure(0, weight=1)
+        self.log = tk.Text(
+            log_frame,
+            bg="#0f172a",
+            fg="#dbeafe",
+            insertbackground="#dbeafe",
+            font=("Consolas", 10),
+            padx=10,
+            pady=10,
+        )
+        self.log.grid(row=0, column=0, sticky="nsew")
         self.log.insert("end", "Здесь будет журнал запуска и записи.\n")
         self.log.configure(state="disabled")
 
@@ -233,7 +415,7 @@ class App:
         self.log.see("end")
         self.log.configure(state="disabled")
 
-    def _flush_logs(self):
+    def flush_logs(self):
         while True:
             try:
                 text = self.log_queue.get_nowait()
@@ -244,28 +426,28 @@ class App:
             self.append_log(f"\nПроцесс завершился с кодом {self.process.poll()}.\n")
             self.status.configure(text="Процесс завершен")
             self.process = None
-        self.root.after(120, self._flush_logs)
+        self.root.after(120, self.flush_logs)
 
-    def load_config(self, show):
-        cfg = copy.deepcopy(DEFAULT_CONFIG)
+    def load_config(self, show_message):
+        config = copy.deepcopy(DEFAULT_CONFIG)
         if CONFIG_PATH.exists():
-            with CONFIG_PATH.open("r", encoding="utf-8") as f:
-                loaded = json.load(f)
+            with CONFIG_PATH.open("r", encoding="utf-8") as file:
+                loaded = json.load(file)
             if isinstance(loaded, dict):
-                cfg.update({k: v for k, v in loaded.items() if k != "actions"})
+                config.update({key: value for key, value in loaded.items() if key != "actions"})
                 if isinstance(loaded.get("actions"), list):
-                    cfg["actions"] = loaded["actions"]
-        self.vars["startup_delay"].set(str(cfg.get("startup_delay", 5)))
-        self.vars["cycles"].set("" if cfg.get("cycles") is None else str(cfg.get("cycles")))
-        self.vars["log_dir"].set(str(cfg.get("log_dir", "logs")))
-        self.vars["log_file"].set(str(cfg.get("log_file", "clicer.log")))
-        self.vars["log_level"].set(str(cfg.get("log_level", "INFO")).upper())
-        self.vars["failsafe_enabled"].set(bool(cfg.get("failsafe_enabled", True)))
-        self.vars["prompt_on_exit"].set(bool(cfg.get("prompt_on_exit", False)))
-        self.actions = copy.deepcopy(cfg.get("actions", []))
+                    config["actions"] = loaded["actions"]
+        self.vars["startup_delay"].set(str(config.get("startup_delay", 5)))
+        self.vars["cycles"].set("" if config.get("cycles") is None else str(config.get("cycles")))
+        self.vars["log_dir"].set(str(config.get("log_dir", "logs")))
+        self.vars["log_file"].set(str(config.get("log_file", "clicer.log")))
+        self.vars["log_level"].set(str(config.get("log_level", "INFO")).upper())
+        self.vars["failsafe_enabled"].set(bool(config.get("failsafe_enabled", True)))
+        self.vars["prompt_on_exit"].set(bool(config.get("prompt_on_exit", False)))
+        self.actions = copy.deepcopy(config.get("actions", []))
         self.refresh_tree()
         self.status.configure(text="Конфиг загружен")
-        if show:
+        if show_message:
             messagebox.showinfo("Конфиг", "Настройки загружены.")
 
     def collect_config(self):
@@ -274,7 +456,7 @@ class App:
         if not self.actions:
             raise ValueError("Сценарий пуст.")
         return {
-            "startup_delay": self.to_int(self.vars["startup_delay"].get(), "Задержка", True),
+            "startup_delay": self.to_int(self.vars["startup_delay"].get(), "Задержка", allow_zero=True),
             "cycles": self.to_optional_int(self.vars["cycles"].get(), "Количество циклов"),
             "log_dir": self.vars["log_dir"].get().strip() or "logs",
             "log_file": self.vars["log_file"].get().strip() or "clicer.log",
@@ -286,29 +468,38 @@ class App:
 
     def save_config(self):
         try:
-            cfg = self.collect_config()
+            config = self.collect_config()
         except ValueError as exc:
             messagebox.showerror("Ошибка", str(exc))
             return False
-        if cfg is None:
+        if config is None:
             return False
-        with CONFIG_PATH.open("w", encoding="utf-8") as f:
-            json.dump(cfg, f, ensure_ascii=False, indent=2)
+        with CONFIG_PATH.open("w", encoding="utf-8") as file:
+            json.dump(config, file, ensure_ascii=False, indent=2)
         self.append_log(f"Конфиг сохранен в {CONFIG_PATH.name}\n")
         self.status.configure(text="Конфиг сохранен")
         return True
 
-    def refresh_tree(self, select=None):
+    def refresh_tree(self, select_index=None):
         for item in self.tree.get_children():
             self.tree.delete(item)
-        for idx, action in enumerate(self.actions):
-            self.tree.insert("", "end", iid=str(idx), values=("Y" if action.get("enabled", True) else "N", TYPE_LABELS.get(action.get("type", ""), action.get("type", "")), action.get("label", "")))
+        for index, action in enumerate(self.actions):
+            self.tree.insert(
+                "",
+                "end",
+                iid=str(index),
+                values=(
+                    "✓" if action.get("enabled", True) else "",
+                    TYPE_LABELS.get(action.get("type", ""), action.get("type", "")),
+                    action.get("label", ""),
+                ),
+            )
         if self.actions:
-            idx = 0 if select is None else max(0, min(select, len(self.actions) - 1))
-            self.tree.selection_set(str(idx))
-            self.tree.focus(str(idx))
-            self.selected = idx
-            self.render_editor(idx)
+            index = 0 if select_index is None else max(0, min(select_index, len(self.actions) - 1))
+            self.tree.selection_set(str(index))
+            self.tree.focus(str(index))
+            self.selected = index
+            self.render_editor(index)
         else:
             self.selected = None
             self.clear_editor()
@@ -324,36 +515,38 @@ class App:
             self.selected = int(selection[0])
             self.render_editor(self.selected)
 
-    def render_editor(self, idx):
+    def render_editor(self, index):
         self.clear_editor()
-        action = self.actions[idx]
-        ttk.Label(self.details, text=f"Тип: {TYPE_LABELS.get(action['type'], action['type'])}").grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 8))
+        action = self.actions[index]
+        ttk.Label(self.details, text=f"Тип: {TYPE_LABELS.get(action['type'], action['type'])}").grid(
+            row=0, column=0, columnspan=2, sticky="w", pady=(0, 8)
+        )
         for row, field in enumerate(FIELDS[action["type"]], start=1):
             name, label, kind, *extra = field
             ttk.Label(self.details, text=label).grid(row=row, column=0, sticky="w", padx=(0, 10), pady=4)
-            widget, var = self.make_widget(kind, action.get(name), extra[0] if extra else None)
+            widget, variable = self.make_widget(kind, action.get(name), extra[0] if extra else None)
             widget.grid(row=row, column=1, sticky="ew", pady=4)
-            self.editor[name] = (var, kind)
+            self.editor[name] = (variable, kind)
 
     def make_widget(self, kind, value, extra):
         if kind == "bool":
-            var = tk.BooleanVar(value=bool(value))
-            return ttk.Checkbutton(self.details, variable=var), var
+            variable = tk.BooleanVar(value=bool(value))
+            return ttk.Checkbutton(self.details, variable=variable), variable
         if kind == "combo":
-            var = tk.StringVar(value="" if value is None else str(value))
-            return ttk.Combobox(self.details, textvariable=var, values=extra, state="readonly"), var
-        if kind == "csv":
-            value = ", ".join(value) if isinstance(value, list) else value
-        var = tk.StringVar(value="" if value is None else str(value))
-        return ttk.Entry(self.details, textvariable=var), var
+            variable = tk.StringVar(value="" if value is None else str(value))
+            return ttk.Combobox(self.details, textvariable=variable, values=extra, state="readonly"), variable
+        if kind == "csv" and isinstance(value, list):
+            value = ", ".join(value)
+        variable = tk.StringVar(value="" if value is None else str(value))
+        return ttk.Entry(self.details, textvariable=variable), variable
 
     def apply_selected(self):
         if self.selected is None:
             return False
         action = copy.deepcopy(self.actions[self.selected])
         try:
-            for name, (_var, kind) in self.editor.items():
-                action[name] = self.read_value(_var, kind, name)
+            for name, (variable, kind) in self.editor.items():
+                action[name] = self.read_value(variable, kind, name)
             self.validate_action(action)
         except ValueError as exc:
             messagebox.showerror("Ошибка", str(exc))
@@ -366,16 +559,16 @@ class App:
     def apply_selected_if_needed(self):
         return True if self.selected is None or not self.editor else self.apply_selected()
 
-    def read_value(self, var, kind, label):
+    def read_value(self, variable, kind, label):
         if kind == "bool":
-            return bool(var.get())
-        text = var.get().strip()
+            return bool(variable.get())
+        text = variable.get().strip()
         if kind == "str":
             return text
         if kind == "int":
-            return self.to_int(text, label, False)
+            return self.to_int(text, label, allow_zero=False)
         if kind == "optional_int":
-            return None if not text else self.to_int(text, label, False)
+            return None if not text else self.to_int(text, label, allow_zero=False)
         if kind == "float":
             return self.to_float(text, label)
         if kind == "csv":
@@ -409,17 +602,19 @@ class App:
         value = tk.StringVar(value="scroll")
         ttk.Label(dialog, text="Тип действия:", padding=10).pack(anchor="w")
         ttk.Combobox(dialog, textvariable=value, values=tuple(TYPE_LABELS.keys()), state="readonly").pack(fill="x", padx=10)
+
         def accept():
             dialog.result = value.get()
             dialog.destroy()
+
         ttk.Button(dialog, text="Добавить", command=accept).pack(padx=10, pady=10, anchor="w")
         dialog.result = None
         self.root.wait_window(dialog)
         if not dialog.result:
             return
-        idx = len(self.actions) if self.selected is None else self.selected + 1
-        self.actions.insert(idx, copy.deepcopy(ACTION_TEMPLATES[dialog.result]))
-        self.refresh_tree(idx)
+        index = len(self.actions) if self.selected is None else self.selected + 1
+        self.actions.insert(index, copy.deepcopy(ACTION_TEMPLATES[dialog.result]))
+        self.refresh_tree(index)
 
     def duplicate_action(self):
         if self.selected is None or not self.apply_selected_if_needed():
@@ -470,6 +665,7 @@ class App:
             else:
                 self.append_log("Запись завершена без действий.\n")
                 self.status.configure(text="Запись завершена")
+
         self.root.after(0, finalize)
 
     def start_process(self):
@@ -483,19 +679,26 @@ class App:
             candidate = python_exe.with_name("python.exe")
             if candidate.exists():
                 python_exe = candidate
-        cmd = [str(python_exe), str(SCRIPT_PATH), "--config", str(CONFIG_PATH), "--no-prompt"]
-        kwargs = {"cwd": BASE_DIR, "stdout": subprocess.PIPE, "stderr": subprocess.STDOUT, "text": True, "encoding": "utf-8", "errors": "replace"}
+        command = [str(python_exe), str(SCRIPT_PATH), "--config", str(CONFIG_PATH), "--no-prompt"]
+        kwargs = {
+            "cwd": BASE_DIR,
+            "stdout": subprocess.PIPE,
+            "stderr": subprocess.STDOUT,
+            "text": True,
+            "encoding": "utf-8",
+            "errors": "replace",
+        }
         if os.name == "nt":
             kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
-            info = subprocess.STARTUPINFO()
-            info.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-            kwargs["startupinfo"] = info
-        self.append_log(f"\nЗапуск: {' '.join(cmd)}\n")
-        self.process = subprocess.Popen(cmd, **kwargs)
+            startup = subprocess.STARTUPINFO()
+            startup.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            kwargs["startupinfo"] = startup
+        self.append_log(f"\nЗапуск: {' '.join(command)}\n")
+        self.process = subprocess.Popen(command, **kwargs)
         self.status.configure(text="Процесс выполняется")
-        threading.Thread(target=self._read_output, daemon=True).start()
+        threading.Thread(target=self.read_output, daemon=True).start()
 
-    def _read_output(self):
+    def read_output(self):
         assert self.process and self.process.stdout
         for line in self.process.stdout:
             self.log_queue.put(line)
@@ -516,9 +719,9 @@ class App:
     def on_close(self):
         if self.recording and self.recorder:
             self.recorder.stop()
-        if self.process and self.process.poll() is None and not messagebox.askyesno("Выход", "Сценарий еще работает. Остановить и закрыть?"):
-            return
         if self.process and self.process.poll() is None:
+            if not messagebox.askyesno("Выход", "Сценарий еще работает. Остановить и закрыть?"):
+                return
             self.process.terminate()
         self.root.destroy()
 
@@ -535,7 +738,7 @@ class App:
     @staticmethod
     def to_optional_int(value, label):
         value = value.strip()
-        return None if not value else App.to_int(value, label, False)
+        return None if not value else App.to_int(value, label, allow_zero=False)
 
     @staticmethod
     def to_float(value, label):
