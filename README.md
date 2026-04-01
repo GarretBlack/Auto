@@ -80,7 +80,6 @@
 
 Если не хочется собирать проект локально, готовый установщик можно взять прямо из репозитория:
 
-- локально: `artifacts\EmulationWorkSetup.exe`
 - в GitHub: `https://github.com/GarretBlack/Auto/blob/main/artifacts/EmulationWorkSetup.exe`
 
 Установленная версия хранит пользовательские данные отдельно от папки программы:
