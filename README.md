@@ -88,5 +88,5 @@
 
 В репозитории хранится готовый установщик Windows, который можно скачать без локальной сборки:
 
-- `artifacts\EmulationWorkSetup.exe` - копия актуального установщика, добавляемая в репозиторий.
-- GitHub: `https://github.com/GarretBlack/Auto/blob/main/artifacts/EmulationWorkSetup.exe`
+- `installer\EmulationWorkSetup.exe` - копия актуального установщика, добавляемая в репозиторий.
+- GitHub: `https://github.com/GarretBlack/Auto/blob/main/installer/EmulationWorkSetup.exe`
