@@ -19,13 +19,20 @@ from app_runtime import ensure_user_config, resolve_user_path
 
 LOGGER = logging.getLogger("clicer")
 
+RUN_MODES = {"cycles", "infinite", "timer"}
+
 ACTION_TEMPLATES: dict[str, dict[str, Any]] = {
     "switch_tab": {
         "type": "switch_tab",
         "label": "Переключить вкладку",
         "enabled": True,
+        "switch_mode": "ctrl_tab",
         "repeat_min": 1,
         "repeat_max": 1,
+        "hold_before_tab_min": 0.15,
+        "hold_before_tab_max": 0.3,
+        "hold_after_tab_min": 0.1,
+        "hold_after_tab_max": 0.2,
         "sleep_after_min": 0.3,
         "sleep_after_max": 0.6,
     },
@@ -112,8 +119,13 @@ DEFAULT_ACTIONS = [
     {
         "type": "switch_tab",
         "label": "Переключить вкладку",
+        "switch_mode": "ctrl_tab",
         "repeat_min": 1,
         "repeat_max": 1,
+        "hold_before_tab_min": 0.15,
+        "hold_before_tab_max": 0.3,
+        "hold_after_tab_min": 0.1,
+        "hold_after_tab_max": 0.2,
         "sleep_after_min": 0.4,
         "sleep_after_max": 0.7,
     },
@@ -176,7 +188,9 @@ DEFAULT_ACTIONS = [
 
 DEFAULT_CONFIG: dict[str, Any] = {
     "startup_delay": 5,
+    "run_mode": "cycles",
     "cycles": 1,
+    "timer_minutes": 60.0,
     "failsafe_enabled": True,
     "prompt_on_exit": False,
     "log_dir": "logs",
@@ -191,9 +205,11 @@ DEFAULT_CONFIG_PATH = ensure_user_config(DEFAULT_CONFIG)
 @dataclass
 class ScriptConfig:
     startup_delay: int
+    run_mode: str
     failsafe_enabled: bool
     prompt_on_exit: bool
     cycle_limit: int | None
+    timer_minutes: float | None
     log_dir: str
     log_file: str
     log_level: str
@@ -201,13 +217,17 @@ class ScriptConfig:
     panic_threshold: int = 5
     pause_between_actions: float = 0.2
     config_path: str | None = None
+    deadline_monotonic: float | None = None
+    timer_stop_logged: bool = False
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Исполнение сценария автоматизации из JSON-конфига.")
     parser.add_argument("--config", default=str(DEFAULT_CONFIG_PATH), help="Путь к JSON-конфигу.")
     parser.add_argument("--startup-delay", type=int, default=None, help="Задержка перед стартом в секундах.")
+    parser.add_argument("--run-mode", choices=tuple(sorted(RUN_MODES)), default=None, help="Режим работы: cycles, infinite, timer.")
     parser.add_argument("--cycles", type=int, default=None, help="Ограничение числа циклов.")
+    parser.add_argument("--timer-minutes", type=float, default=None, help="Время работы в минутах для режима timer.")
     parser.add_argument("--log-level", default=None, help="Уровень логирования: DEBUG, INFO, WARNING, ERROR.")
     parser.add_argument("--log-dir", default=None, help="Папка для логов.")
     parser.add_argument("--disable-failsafe", action="store_true", help="Отключить штатную защиту pyautogui.")
@@ -233,14 +253,18 @@ def build_config(args: argparse.Namespace) -> ScriptConfig:
 
     raw_config = copy.deepcopy(DEFAULT_CONFIG)
     file_config = load_json_config(str(config_path))
-    raw_config.update({k: v for k, v in file_config.items() if k != "actions"})
+    raw_config.update({key: value for key, value in file_config.items() if key != "actions"})
     if "actions" in file_config:
         raw_config["actions"] = file_config["actions"]
 
     if args.startup_delay is not None:
         raw_config["startup_delay"] = args.startup_delay
+    if args.run_mode is not None:
+        raw_config["run_mode"] = args.run_mode
     if args.cycles is not None:
         raw_config["cycles"] = args.cycles
+    if args.timer_minutes is not None:
+        raw_config["timer_minutes"] = args.timer_minutes
     if args.log_level is not None:
         raw_config["log_level"] = args.log_level
     if args.log_dir is not None:
@@ -252,18 +276,26 @@ def build_config(args: argparse.Namespace) -> ScriptConfig:
 
     actions = normalize_actions(raw_config.get("actions", []))
     startup_delay = int(raw_config.get("startup_delay", 5))
+    run_mode = str(raw_config.get("run_mode", "cycles"))
     cycles = raw_config.get("cycles")
+    timer_minutes = raw_config.get("timer_minutes")
 
     if startup_delay < 0:
         raise ValueError("Задержка перед стартом не может быть отрицательной.")
-    if cycles is not None and int(cycles) <= 0:
+    if run_mode not in RUN_MODES:
+        raise ValueError("Неизвестный режим работы.")
+    if run_mode == "cycles" and (cycles is None or int(cycles) <= 0):
         raise ValueError("Количество циклов должно быть больше нуля.")
+    if run_mode == "timer" and (timer_minutes is None or float(timer_minutes) <= 0):
+        raise ValueError("Для режима работы по таймеру нужно указать положительное время.")
 
     return ScriptConfig(
         startup_delay=startup_delay,
+        run_mode=run_mode,
         failsafe_enabled=bool(raw_config.get("failsafe_enabled", True)),
         prompt_on_exit=bool(raw_config.get("prompt_on_exit", False)),
-        cycle_limit=None if cycles in (None, "") else int(cycles),
+        cycle_limit=int(cycles) if run_mode == "cycles" and cycles not in (None, "") else None,
+        timer_minutes=float(timer_minutes) if run_mode == "timer" and timer_minutes not in (None, "") else None,
         log_dir=str(raw_config.get("log_dir", "logs")),
         log_file=str(raw_config.get("log_file", "clicer.log")),
         log_level=str(raw_config.get("log_level", "INFO")).upper(),
@@ -301,7 +333,6 @@ def configure_stdio() -> None:
         try:
             stream.reconfigure(encoding="utf-8", errors="replace")
         except ValueError:
-            # Ignore already-closed redirected streams.
             continue
 
 
@@ -341,6 +372,17 @@ def check_panic_exit(config: ScriptConfig) -> bool:
     return False
 
 
+def timer_reached(config: ScriptConfig) -> bool:
+    if config.deadline_monotonic is None:
+        return False
+    if time.monotonic() < config.deadline_monotonic:
+        return False
+    if not config.timer_stop_logged:
+        LOGGER.info("Достигнуто время работы: %.1f мин.", config.timer_minutes or 0.0)
+        config.timer_stop_logged = True
+    return True
+
+
 def clamp(value: int, min_value: int, max_value: int) -> int:
     return max(min_value, min(value, max_value))
 
@@ -356,7 +398,7 @@ def random_int(min_value: int, max_value: int) -> int:
 def sleep_with_checks(duration: float, config: ScriptConfig, step: float = 0.2) -> bool:
     remaining = max(0.0, float(duration))
     while remaining > 0:
-        if check_panic_exit(config):
+        if timer_reached(config) or check_panic_exit(config):
             return True
         chunk = min(step, remaining)
         time.sleep(chunk)
@@ -370,17 +412,17 @@ def human_move(target_x: int, target_y: int, duration: float, config: ScriptConf
     midpoint_y = int((current_y + target_y) / 2 + random.randint(-70, 70))
 
     for point_x, point_y in ((midpoint_x, midpoint_y), (target_x, target_y)):
-        if check_panic_exit(config):
+        if timer_reached(config) or check_panic_exit(config):
             return True
         pyautogui.moveTo(point_x, point_y, duration=duration / 2, tween=pyautogui.easeInOutQuad)
     return False
 
 
 def straight_move(target_x: int, target_y: int, duration: float, config: ScriptConfig) -> bool:
-    if check_panic_exit(config):
+    if timer_reached(config) or check_panic_exit(config):
         return True
     pyautogui.moveTo(target_x, target_y, duration=duration, tween=pyautogui.linear)
-    return check_panic_exit(config)
+    return timer_reached(config) or check_panic_exit(config)
 
 
 def human_like_move(target_x: int, target_y: int, duration: float, config: ScriptConfig) -> bool:
@@ -398,11 +440,11 @@ def human_like_move(target_x: int, target_y: int, duration: float, config: Scrip
     segment_duration = max(0.08, duration / len(waypoints))
 
     for point_x, point_y in waypoints:
-        if check_panic_exit(config):
+        if timer_reached(config) or check_panic_exit(config):
             return True
         pyautogui.moveTo(point_x, point_y, duration=segment_duration, tween=pyautogui.easeInOutQuad)
 
-    return check_panic_exit(config)
+    return timer_reached(config) or check_panic_exit(config)
 
 
 def get_safe_point(action: dict[str, Any]) -> tuple[int, int]:
@@ -435,7 +477,36 @@ def maybe_micro_move(action: dict[str, Any], config: ScriptConfig) -> bool:
     )
     duration = random_float(action.get("micro_move_duration_min", 0.2), action.get("micro_move_duration_max", 0.6))
     pyautogui.moveTo(new_x, new_y, duration=duration)
-    return check_panic_exit(config)
+    return timer_reached(config) or check_panic_exit(config)
+
+
+def switch_tab_with_mode(action: dict[str, Any], config: ScriptConfig) -> bool:
+    repeat = random_int(action.get("repeat_min", 1), action.get("repeat_max", 1))
+    switch_mode = str(action.get("switch_mode", "ctrl_tab"))
+
+    for _ in range(repeat):
+        if timer_reached(config) or check_panic_exit(config):
+            return True
+
+        if switch_mode == "alt_tab_delay":
+            pyautogui.keyDown("alt")
+            try:
+                before_delay = random_float(action.get("hold_before_tab_min", 0.15), action.get("hold_before_tab_max", 0.3))
+                if sleep_with_checks(before_delay, config, step=0.05):
+                    return True
+                pyautogui.press("tab")
+                after_delay = random_float(action.get("hold_after_tab_min", 0.1), action.get("hold_after_tab_max", 0.2))
+                if sleep_with_checks(after_delay, config, step=0.05):
+                    return True
+            finally:
+                pyautogui.keyUp("alt")
+        else:
+            pyautogui.hotkey("ctrl", "tab")
+
+        if sleep_with_checks(random_float(action.get("sleep_after_min", 0.0), action.get("sleep_after_max", 0.0)), config):
+            return True
+
+    return False
 
 
 def execute_action(action: dict[str, Any], config: ScriptConfig) -> bool:
@@ -447,19 +518,12 @@ def execute_action(action: dict[str, Any], config: ScriptConfig) -> bool:
     LOGGER.info("Действие: %s", label)
 
     if action_type == "switch_tab":
-        repeat = random_int(action.get("repeat_min", 1), action.get("repeat_max", 1))
-        for _ in range(repeat):
-            if check_panic_exit(config):
-                return True
-            pyautogui.hotkey("ctrl", "tab")
-            if sleep_with_checks(random_float(action.get("sleep_after_min", 0.0), action.get("sleep_after_max", 0.0)), config):
-                return True
-        return False
+        return switch_tab_with_mode(action, config)
 
     if action_type == "scroll":
         repeat = random_int(action.get("repeat_min", 1), action.get("repeat_max", 1))
         for _ in range(repeat):
-            if check_panic_exit(config):
+            if timer_reached(config) or check_panic_exit(config):
                 return True
             amount = random_int(action.get("amount_min", -100), action.get("amount_max", -100))
             pyautogui.scroll(amount)
@@ -496,7 +560,7 @@ def execute_action(action: dict[str, Any], config: ScriptConfig) -> bool:
             clicks=int(action.get("clicks", 1)),
             interval=float(action.get("interval", 0.0)),
         )
-        return check_panic_exit(config)
+        return timer_reached(config) or check_panic_exit(config)
 
     if action_type == "keypress":
         pyautogui.press(str(action.get("key", "shift")))
@@ -516,18 +580,28 @@ def run(config: ScriptConfig) -> tuple[int, int, float]:
     start_time = time.time()
     total_cycles = 0
 
+    if config.run_mode == "timer" and config.timer_minutes is not None:
+        config.deadline_monotonic = time.monotonic() + config.timer_minutes * 60.0
+
     LOGGER.info("=== ИСПОЛНЕНИЕ СЦЕНАРИЯ ===")
     LOGGER.info("Конфиг: %s", config.config_path or "встроенные значения")
-    LOGGER.info("Лог-файл: %s", Path(config.log_dir) / config.log_file)
+    LOGGER.info("Лог-файл: %s", resolve_user_path(config.log_dir) / config.log_file)
     LOGGER.info("Активных действий в сценарии: %s", len([item for item in config.actions if item.get("enabled", True)]))
+    if config.run_mode == "cycles":
+        LOGGER.info("Режим работы: количество циклов (%s).", config.cycle_limit)
+    elif config.run_mode == "infinite":
+        LOGGER.info("Режим работы: бесконечная работа.")
+    else:
+        LOGGER.info("Режим работы: по таймеру (%.1f мин).", config.timer_minutes or 0.0)
     LOGGER.info("Подготовка %s секунд. Разверните нужное окно.", config.startup_delay)
+
     if sleep_with_checks(config.startup_delay, config):
-        return 0, 0, time.time() - start_time
+        return total_cycles, count_enabled_actions(config.actions), time.time() - start_time
 
     while True:
-        if check_panic_exit(config):
+        if timer_reached(config) or check_panic_exit(config):
             break
-        if config.cycle_limit is not None and total_cycles >= config.cycle_limit:
+        if config.run_mode == "cycles" and config.cycle_limit is not None and total_cycles >= config.cycle_limit:
             LOGGER.info("Достигнут лимит циклов: %s.", config.cycle_limit)
             break
 
@@ -535,13 +609,15 @@ def run(config: ScriptConfig) -> tuple[int, int, float]:
         LOGGER.info(">>> ЦИКЛ № %s <<<", total_cycles)
 
         for action in config.actions:
+            if timer_reached(config):
+                return total_cycles, count_enabled_actions(config.actions), time.time() - start_time
             if execute_action(action, config):
-                return total_cycles, count_executed_actions(config.actions), time.time() - start_time
+                return total_cycles, count_enabled_actions(config.actions), time.time() - start_time
 
-    return total_cycles, count_executed_actions(config.actions), time.time() - start_time
+    return total_cycles, count_enabled_actions(config.actions), time.time() - start_time
 
 
-def count_executed_actions(actions: list[dict[str, Any]]) -> int:
+def count_enabled_actions(actions: list[dict[str, Any]]) -> int:
     return len([action for action in actions if action.get("enabled", True)])
 
 

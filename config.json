@@ -1,6 +1,8 @@
 {
   "startup_delay": 5,
+  "run_mode": "cycles",
   "cycles": 1,
+  "timer_minutes": 60.0,
   "failsafe_enabled": true,
   "prompt_on_exit": false,
   "log_dir": "logs",
@@ -11,8 +13,13 @@
       "type": "switch_tab",
       "label": "Переключить вкладку",
       "enabled": true,
+      "switch_mode": "ctrl_tab",
       "repeat_min": 1,
       "repeat_max": 1,
+      "hold_before_tab_min": 0.15,
+      "hold_before_tab_max": 0.3,
+      "hold_after_tab_min": 0.1,
+      "hold_after_tab_max": 0.2,
       "sleep_after_min": 0.4,
       "sleep_after_max": 0.7
     },

@@ -11,7 +11,7 @@ from pathlib import Path
 from tkinter import messagebox, ttk
 
 from app_runtime import ensure_user_config, get_bundle_dir, get_install_dir, is_frozen, resolve_user_path
-from clicer import ACTION_TEMPLATES, DEFAULT_CONFIG
+from clicer import ACTION_TEMPLATES, DEFAULT_CONFIG, normalize_actions
 
 try:
     from pynput import keyboard, mouse
@@ -37,12 +37,24 @@ TYPE_LABELS = {
     "hotkey": "Горячая клавиша",
 }
 
+RUN_MODE_LABELS = {
+    "cycles": "Количество циклов",
+    "infinite": "Бесконечная работа",
+    "timer": "Работа по таймеру",
+}
+RUN_MODE_VALUES = {label: key for key, label in RUN_MODE_LABELS.items()}
+
 FIELDS = {
     "switch_tab": [
         ("label", "Название", "str"),
         ("enabled", "Включено", "bool"),
+        ("switch_mode", "Режим переключения", "mapped_combo", (("ctrl_tab", "Ctrl+Tab"), ("alt_tab_delay", "Alt+Tab с задержкой"))),
         ("repeat_min", "Повтор мин", "int"),
         ("repeat_max", "Повтор макс", "int"),
+        ("hold_before_tab_min", "Удержание Alt до Tab мин", "float"),
+        ("hold_before_tab_max", "Удержание Alt до Tab макс", "float"),
+        ("hold_after_tab_min", "Удержание Alt после Tab мин", "float"),
+        ("hold_after_tab_max", "Удержание Alt после Tab макс", "float"),
         ("sleep_after_min", "Пауза мин", "float"),
         ("sleep_after_max", "Пауза макс", "float"),
     ],
@@ -274,7 +286,7 @@ class App:
         self.root = root
         self.root.title("Эмуляция работы")
         self._set_window_icon()
-        self.root.geometry("1200x820")
+        self.root.geometry("1200x860")
         self.process = None
         self.actions = []
         self.selected = None
@@ -283,16 +295,15 @@ class App:
         self.recorder = None
         self.recording = False
         self.vars = {
-            name: var
-            for name, var in [
-                ("startup_delay", tk.StringVar()),
-                ("cycles", tk.StringVar()),
-                ("log_dir", tk.StringVar()),
-                ("log_file", tk.StringVar()),
-                ("log_level", tk.StringVar()),
-                ("failsafe_enabled", tk.BooleanVar()),
-                ("prompt_on_exit", tk.BooleanVar()),
-            ]
+            "startup_delay": tk.StringVar(),
+            "run_mode": tk.StringVar(value=RUN_MODE_LABELS["cycles"]),
+            "cycles": tk.StringVar(),
+            "timer_minutes": tk.StringVar(),
+            "log_dir": tk.StringVar(),
+            "log_file": tk.StringVar(),
+            "log_level": tk.StringVar(),
+            "failsafe_enabled": tk.BooleanVar(),
+            "prompt_on_exit": tk.BooleanVar(),
         }
         self._build()
         self.load_config(False)
@@ -346,32 +357,53 @@ class App:
         form = ttk.LabelFrame(general, text="Настройки", padding=12)
         form.pack(fill="x")
         form.columnconfigure(1, weight=1)
-        items = [
-            ("startup_delay", "Задержка перед стартом"),
-            ("cycles", "Количество циклов"),
-            ("log_dir", "Папка логов"),
-            ("log_file", "Имя лог-файла"),
-        ]
-        for idx, (key, label) in enumerate(items):
-            ttk.Label(form, text=label).grid(row=idx, column=0, sticky="w", padx=(0, 12), pady=6)
-            ttk.Entry(form, textvariable=self.vars[key]).grid(row=idx, column=1, sticky="ew", pady=6)
-        ttk.Label(form, text="Уровень логирования").grid(row=4, column=0, sticky="w", padx=(0, 12), pady=6)
+
+        ttk.Label(form, text="Задержка перед стартом").grid(row=0, column=0, sticky="w", padx=(0, 12), pady=6)
+        ttk.Entry(form, textvariable=self.vars["startup_delay"]).grid(row=0, column=1, sticky="ew", pady=6)
+
+        ttk.Label(form, text="Режим работы").grid(row=1, column=0, sticky="w", padx=(0, 12), pady=6)
+        self.run_mode_combo = ttk.Combobox(
+            form,
+            textvariable=self.vars["run_mode"],
+            values=tuple(RUN_MODE_LABELS.values()),
+            state="readonly",
+        )
+        self.run_mode_combo.grid(row=1, column=1, sticky="ew", pady=6)
+        self.run_mode_combo.bind("<<ComboboxSelected>>", self.on_run_mode_changed)
+
+        ttk.Label(form, text="Количество циклов").grid(row=2, column=0, sticky="w", padx=(0, 12), pady=6)
+        self.cycles_entry = ttk.Entry(form, textvariable=self.vars["cycles"])
+        self.cycles_entry.grid(row=2, column=1, sticky="ew", pady=6)
+
+        ttk.Label(form, text="Время работы, минут").grid(row=3, column=0, sticky="w", padx=(0, 12), pady=6)
+        self.timer_entry = ttk.Entry(form, textvariable=self.vars["timer_minutes"])
+        self.timer_entry.grid(row=3, column=1, sticky="ew", pady=6)
+
+        ttk.Label(form, text="Папка логов").grid(row=4, column=0, sticky="w", padx=(0, 12), pady=6)
+        ttk.Entry(form, textvariable=self.vars["log_dir"]).grid(row=4, column=1, sticky="ew", pady=6)
+
+        ttk.Label(form, text="Имя лог-файла").grid(row=5, column=0, sticky="w", padx=(0, 12), pady=6)
+        ttk.Entry(form, textvariable=self.vars["log_file"]).grid(row=5, column=1, sticky="ew", pady=6)
+
+        ttk.Label(form, text="Уровень логирования").grid(row=6, column=0, sticky="w", padx=(0, 12), pady=6)
         ttk.Combobox(
             form,
             textvariable=self.vars["log_level"],
             values=("DEBUG", "INFO", "WARNING", "ERROR"),
             state="readonly",
-        ).grid(row=4, column=1, sticky="ew", pady=6)
+        ).grid(row=6, column=1, sticky="ew", pady=6)
+
         ttk.Checkbutton(form, text="Включить FailSafe", variable=self.vars["failsafe_enabled"]).grid(
-            row=5, column=0, columnspan=2, sticky="w", pady=(10, 4)
+            row=7, column=0, columnspan=2, sticky="w", pady=(10, 4)
         )
         ttk.Checkbutton(form, text="Показывать ENTER после завершения", variable=self.vars["prompt_on_exit"]).grid(
-            row=6, column=0, columnspan=2, sticky="w"
+            row=8, column=0, columnspan=2, sticky="w"
         )
 
         scenario.columnconfigure(0, weight=1)
         scenario.columnconfigure(1, weight=1)
         scenario.rowconfigure(0, weight=1)
+
         left = ttk.LabelFrame(scenario, text="Действия", padding=12)
         right = ttk.LabelFrame(scenario, text="Параметры выбранного действия", padding=12)
         left.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
@@ -396,7 +428,7 @@ class App:
         self.tree.heading("type", text="Тип")
         self.tree.heading("label", text="Название")
         self.tree.column("on", width=55, anchor="center")
-        self.tree.column("type", width=160)
+        self.tree.column("type", width=180)
         self.tree.column("label", width=280)
         self.tree.grid(row=1, column=0, sticky="nsew")
         self.tree.bind("<<TreeviewSelect>>", self.on_select)
@@ -408,9 +440,7 @@ class App:
         self.details = ttk.Frame(right)
         self.details.grid(row=1, column=0, columnspan=2, sticky="nsew")
         self.details.columnconfigure(1, weight=1)
-        ttk.Button(right, text="Применить изменения", command=self.apply_selected).grid(
-            row=2, column=0, sticky="w", pady=(10, 0)
-        )
+        ttk.Button(right, text="Применить изменения", command=self.apply_selected).grid(row=2, column=0, sticky="w", pady=(10, 0))
 
         self.log = tk.Text(
             logs,
@@ -424,6 +454,14 @@ class App:
         self.log.pack(fill="both", expand=True)
         self.log.insert("end", "Здесь будет журнал запуска и записи.\n")
         self.log.configure(state="disabled")
+
+    def on_run_mode_changed(self, _event=None):
+        self.update_run_mode_state()
+
+    def update_run_mode_state(self):
+        run_mode = RUN_MODE_VALUES.get(self.vars["run_mode"].get(), "cycles")
+        self.cycles_entry.configure(state="normal" if run_mode == "cycles" else "disabled")
+        self.timer_entry.configure(state="normal" if run_mode == "timer" else "disabled")
 
     def append_log(self, text):
         self.log.configure(state="normal")
@@ -447,20 +485,24 @@ class App:
     def load_config(self, show):
         cfg = copy.deepcopy(DEFAULT_CONFIG)
         if CONFIG_PATH.exists():
-            with CONFIG_PATH.open("r", encoding="utf-8") as f:
-                loaded = json.load(f)
+            with CONFIG_PATH.open("r", encoding="utf-8") as file:
+                loaded = json.load(file)
             if isinstance(loaded, dict):
-                cfg.update({k: v for k, v in loaded.items() if k != "actions"})
+                cfg.update({key: value for key, value in loaded.items() if key != "actions"})
                 if isinstance(loaded.get("actions"), list):
                     cfg["actions"] = loaded["actions"]
+
         self.vars["startup_delay"].set(str(cfg.get("startup_delay", 5)))
+        self.vars["run_mode"].set(RUN_MODE_LABELS.get(str(cfg.get("run_mode", "cycles")), RUN_MODE_LABELS["cycles"]))
         self.vars["cycles"].set("" if cfg.get("cycles") is None else str(cfg.get("cycles")))
+        self.vars["timer_minutes"].set("" if cfg.get("timer_minutes") is None else str(cfg.get("timer_minutes")))
         self.vars["log_dir"].set(str(cfg.get("log_dir", "logs")))
         self.vars["log_file"].set(str(cfg.get("log_file", "clicer.log")))
         self.vars["log_level"].set(str(cfg.get("log_level", "INFO")).upper())
         self.vars["failsafe_enabled"].set(bool(cfg.get("failsafe_enabled", True)))
         self.vars["prompt_on_exit"].set(bool(cfg.get("prompt_on_exit", False)))
-        self.actions = copy.deepcopy(cfg.get("actions", []))
+        self.actions = normalize_actions(copy.deepcopy(cfg.get("actions", [])))
+        self.update_run_mode_state()
         self.refresh_tree()
         self.status.configure(text="Конфиг загружен")
         if show:
@@ -471,9 +513,13 @@ class App:
             return None
         if not self.actions:
             raise ValueError("Сценарий пуст.")
-        return {
+
+        run_mode = RUN_MODE_VALUES.get(self.vars["run_mode"].get(), "cycles")
+        config = {
             "startup_delay": self.to_int(self.vars["startup_delay"].get(), "Задержка", True),
+            "run_mode": run_mode,
             "cycles": self.to_optional_int(self.vars["cycles"].get(), "Количество циклов"),
+            "timer_minutes": self.to_optional_float(self.vars["timer_minutes"].get(), "Время работы"),
             "log_dir": self.vars["log_dir"].get().strip() or "logs",
             "log_file": self.vars["log_file"].get().strip() or "clicer.log",
             "log_level": (self.vars["log_level"].get().strip() or "INFO").upper(),
@@ -481,6 +527,13 @@ class App:
             "prompt_on_exit": self.vars["prompt_on_exit"].get(),
             "actions": copy.deepcopy(self.actions),
         }
+
+        if run_mode == "cycles" and config["cycles"] is None:
+            raise ValueError("Для режима 'Количество циклов' укажите число циклов.")
+        if run_mode == "timer" and (config["timer_minutes"] is None or config["timer_minutes"] <= 0):
+            raise ValueError("Для режима 'Работа по таймеру' укажите время в минутах.")
+
+        return config
 
     def save_config(self):
         try:
@@ -490,8 +543,8 @@ class App:
             return False
         if cfg is None:
             return False
-        with CONFIG_PATH.open("w", encoding="utf-8") as f:
-            json.dump(cfg, f, ensure_ascii=False, indent=2)
+        with CONFIG_PATH.open("w", encoding="utf-8") as file:
+            json.dump(cfg, file, ensure_ascii=False, indent=2)
         self.append_log(f"Конфиг сохранен в {CONFIG_PATH}\n")
         self.status.configure(text="Конфиг сохранен")
         return True
@@ -551,6 +604,12 @@ class App:
         if kind == "combo":
             var = tk.StringVar(value="" if value is None else str(value))
             return ttk.Combobox(self.details, textvariable=var, values=extra, state="readonly"), var
+        if kind == "mapped_combo":
+            mapping = dict(extra)
+            reverse = {label: key for key, label in mapping.items()}
+            display_var = tk.StringVar(value=mapping.get(value, next(iter(mapping.values()))))
+            widget = ttk.Combobox(self.details, textvariable=display_var, values=tuple(mapping.values()), state="readonly")
+            return widget, (display_var, reverse)
         if kind == "csv":
             value = ", ".join(value) if isinstance(value, list) else value
         var = tk.StringVar(value="" if value is None else str(value))
@@ -561,8 +620,8 @@ class App:
             return False
         action = copy.deepcopy(self.actions[self.selected])
         try:
-            for name, (_var, kind) in self.editor.items():
-                action[name] = self.read_value(_var, kind, name)
+            for name, (var, kind) in self.editor.items():
+                action[name] = self.read_value(var, kind, name)
             self.validate_action(action)
         except ValueError as exc:
             messagebox.showerror("Ошибка", str(exc))
@@ -578,6 +637,9 @@ class App:
     def read_value(self, var, kind, label):
         if kind == "bool":
             return bool(var.get())
+        if kind == "mapped_combo":
+            display_var, reverse = var
+            return reverse[display_var.get()]
         text = var.get().strip()
         if kind == "str":
             return text
@@ -596,12 +658,19 @@ class App:
             raise ValueError("repeat_min не может быть больше repeat_max.")
         if action["type"] in {"pause", "wait"} and action["duration_min"] > action["duration_max"]:
             raise ValueError("duration_min не может быть больше duration_max.")
+        if action["type"] == "switch_tab":
+            if action["hold_before_tab_min"] > action["hold_before_tab_max"]:
+                raise ValueError("Минимальное удержание Alt до Tab больше максимального.")
+            if action["hold_after_tab_min"] > action["hold_after_tab_max"]:
+                raise ValueError("Минимальное удержание Alt после Tab больше максимального.")
+            if action["sleep_after_min"] > action["sleep_after_max"]:
+                raise ValueError("Минимальная пауза после действия больше максимальной.")
         if action["type"] == "scroll":
             if action["sleep_min"] > action["sleep_max"]:
                 raise ValueError("sleep_min не может быть больше sleep_max.")
             if action["micro_move_duration_min"] > action["micro_move_duration_max"]:
                 raise ValueError("Минимальная длительность микродвижения больше максимальной.")
-        if action["type"] in {"switch_tab", "keypress", "hotkey"} and action["sleep_after_min"] > action["sleep_after_max"]:
+        if action["type"] in {"keypress", "hotkey"} and action["sleep_after_min"] > action["sleep_after_max"]:
             raise ValueError("Минимальная пауза после действия больше максимальной.")
         if action["type"] in {"move_random", "mouse_move"} and action["duration_min"] > action["duration_max"]:
             raise ValueError("Минимальная длительность движения больше максимальной.")
@@ -677,7 +746,7 @@ class App:
             self.recording = False
             self.record_btn.configure(text="Запись действий")
             if actions:
-                self.actions.extend(actions)
+                self.actions.extend(normalize_actions(actions))
                 self.refresh_tree(len(self.actions) - 1)
                 self.append_log(f"Добавлено записанных действий: {len(actions)}\n")
                 self.status.configure(text=f"Записано: {len(actions)} действий")
@@ -780,6 +849,11 @@ class App:
         if number < 0:
             raise ValueError(f"{label}: число не может быть отрицательным.")
         return number
+
+    @staticmethod
+    def to_optional_float(value, label):
+        value = value.strip()
+        return None if not value else App.to_float(value, label)
 
 
 def main():
