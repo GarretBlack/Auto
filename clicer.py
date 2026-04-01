@@ -1,10 +1,13 @@
 import argparse
+import json
 import logging
 import random
 import time
 import traceback
 from dataclasses import dataclass
 from datetime import timedelta
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
 import pyautogui
 
@@ -29,18 +32,25 @@ class ScriptConfig:
     failsafe_enabled: bool = True
     prompt_on_exit: bool = True
     cycle_limit: int | None = None
+    log_dir: str = "logs"
+    log_file: str = "clicer.log"
+    log_level: str = "INFO"
+    config_path: str | None = None
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Имитация активности в окне с безопасной остановкой и настраиваемыми интервалами."
     )
-    parser.add_argument("--startup-delay", type=int, default=10, help="Задержка перед стартом в секундах.")
+    parser.add_argument("--config", default="config.json", help="Путь к JSON-конфигу.")
+    parser.add_argument("--startup-delay", type=int, default=None, help="Задержка перед стартом в секундах.")
     parser.add_argument("--cycles", type=int, default=None, help="Ограничение числа циклов.")
-    parser.add_argument("--wait-min", type=int, default=40, help="Минимальная пауза между циклами.")
-    parser.add_argument("--wait-max", type=int, default=110, help="Максимальная пауза между циклами.")
-    parser.add_argument("--read-steps-min", type=int, default=10, help="Минимум шагов чтения вниз.")
-    parser.add_argument("--read-steps-max", type=int, default=18, help="Максимум шагов чтения вниз.")
+    parser.add_argument("--wait-min", type=int, default=None, help="Минимальная пауза между циклами.")
+    parser.add_argument("--wait-max", type=int, default=None, help="Максимальная пауза между циклами.")
+    parser.add_argument("--read-steps-min", type=int, default=None, help="Минимум шагов чтения вниз.")
+    parser.add_argument("--read-steps-max", type=int, default=None, help="Максимум шагов чтения вниз.")
+    parser.add_argument("--log-level", default=None, help="Уровень логирования: DEBUG, INFO, WARNING, ERROR.")
+    parser.add_argument("--log-dir", default=None, help="Папка для логов.")
     parser.add_argument(
         "--disable-failsafe",
         action="store_true",
@@ -54,30 +64,89 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def load_config_file(config_path: str) -> dict:
+    path = Path(config_path)
+    if not path.exists():
+        return {}
+
+    with path.open("r", encoding="utf-8") as file:
+        data = json.load(file)
+
+    if not isinstance(data, dict):
+        raise ValueError("Конфиг должен быть JSON-объектом.")
+
+    return data
+
+
+def get_value(args: argparse.Namespace, file_config: dict, field_name: str, fallback):
+    arg_value = getattr(args, field_name)
+    if arg_value is not None:
+        return arg_value
+    return file_config.get(field_name, fallback)
+
+
 def build_config(args: argparse.Namespace) -> ScriptConfig:
-    if args.wait_min > args.wait_max:
+    file_config = load_config_file(args.config)
+
+    failsafe_enabled = file_config.get("failsafe_enabled", True)
+    if args.disable_failsafe:
+        failsafe_enabled = False
+
+    prompt_on_exit = file_config.get("prompt_on_exit", True)
+    if args.no_prompt:
+        prompt_on_exit = False
+
+    config = ScriptConfig(
+        startup_delay=get_value(args, file_config, "startup_delay", 10),
+        wait_min_seconds=get_value(args, file_config, "wait_min", 40),
+        wait_max_seconds=get_value(args, file_config, "wait_max", 110),
+        read_steps_min=get_value(args, file_config, "read_steps_min", 10),
+        read_steps_max=get_value(args, file_config, "read_steps_max", 18),
+        failsafe_enabled=failsafe_enabled,
+        prompt_on_exit=prompt_on_exit,
+        cycle_limit=get_value(args, file_config, "cycles", None),
+        log_dir=get_value(args, file_config, "log_dir", "logs"),
+        log_file=file_config.get("log_file", "clicer.log"),
+        log_level=(get_value(args, file_config, "log_level", "INFO") or "INFO").upper(),
+        config_path=args.config,
+    )
+
+    if config.wait_min_seconds > config.wait_max_seconds:
         raise ValueError("--wait-min не может быть больше --wait-max")
-    if args.read_steps_min > args.read_steps_max:
+    if config.read_steps_min > config.read_steps_max:
         raise ValueError("--read-steps-min не может быть больше --read-steps-max")
-    if args.startup_delay < 0:
+    if config.startup_delay < 0:
         raise ValueError("--startup-delay не может быть отрицательным")
-    if args.cycles is not None and args.cycles <= 0:
+    if config.cycle_limit is not None and config.cycle_limit <= 0:
         raise ValueError("--cycles должен быть положительным числом")
 
-    return ScriptConfig(
-        startup_delay=args.startup_delay,
-        wait_min_seconds=args.wait_min,
-        wait_max_seconds=args.wait_max,
-        read_steps_min=args.read_steps_min,
-        read_steps_max=args.read_steps_max,
-        failsafe_enabled=not args.disable_failsafe,
-        prompt_on_exit=not args.no_prompt,
-        cycle_limit=args.cycles,
-    )
+    return config
 
 
 def configure_runtime(config: ScriptConfig) -> None:
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
+    log_path = Path(config.log_dir)
+    log_path.mkdir(parents=True, exist_ok=True)
+
+    level = getattr(logging, config.log_level, logging.INFO)
+    formatter = logging.Formatter("%(asctime)s | %(levelname)s | %(message)s")
+
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+
+    file_handler = RotatingFileHandler(
+        log_path / config.log_file,
+        maxBytes=1_000_000,
+        backupCount=5,
+        encoding="utf-8",
+    )
+    file_handler.setFormatter(formatter)
+
+    LOGGER.handlers.clear()
+    LOGGER.setLevel(level)
+    LOGGER.addHandler(console_handler)
+    LOGGER.addHandler(file_handler)
+    LOGGER.propagate = False
+
     pyautogui.PAUSE = config.pause_between_actions
     pyautogui.FAILSAFE = config.failsafe_enabled
 
@@ -175,6 +244,8 @@ def run(config: ScriptConfig) -> tuple[int, int, float]:
     total_tabs = 0
 
     LOGGER.info("=== ИМИТАЦИЯ РАБОТЫ ===")
+    LOGGER.info("Конфиг: %s", config.config_path or "встроенные значения")
+    LOGGER.info("Лог-файл: %s", Path(config.log_dir) / config.log_file)
     LOGGER.info("Для аварийной остановки переведите мышь в верхний левый угол.")
     LOGGER.info("Подготовка %s секунд. Разверните нужное окно.", config.startup_delay)
     time.sleep(config.startup_delay)

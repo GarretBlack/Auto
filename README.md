@@ -5,9 +5,11 @@
 ## Что внутри
 
 - `clicer.py` - основной скрипт с параметрами запуска и безопасной остановкой.
+- `config.json` - конфиг по умолчанию для запуска без длинной командной строки.
 - `requirements.txt` - минимальные зависимости проекта.
 - `setup.ps1` - создание `.venv` и установка зависимостей.
 - `run.ps1` - удобный запуск через PowerShell.
+- `register-task.ps1` - регистрация ежедневной задачи в Планировщике Windows.
 - `.gitignore` - исключения для Python, логов и редакторов.
 
 ## Быстрый старт
@@ -15,7 +17,7 @@
 ```powershell
 .\setup.ps1
 .\.venv\Scripts\Activate.ps1
-python .\clicer.py --startup-delay 5 --cycles 1
+python .\clicer.py --config .\config.json
 ```
 
 ## Удобный запуск
@@ -23,7 +25,7 @@ python .\clicer.py --startup-delay 5 --cycles 1
 После создания `.venv` и установки зависимостей можно запускать так:
 
 ```powershell
-.\run.ps1 -StartupDelay 5 -Cycles 1 -NoPrompt
+.\run.ps1 -NoPrompt
 ```
 
 ## Полезные параметры
@@ -34,12 +36,30 @@ python .\clicer.py --help
 
 Поддерживаются, например:
 
+- `--config` - путь к JSON-конфигу.
 - `--startup-delay` - задержка перед стартом.
 - `--cycles` - ограничение числа циклов.
 - `--wait-min` и `--wait-max` - диапазон паузы между циклами.
 - `--read-steps-min` и `--read-steps-max` - глубина прокрутки в режиме чтения.
+- `--log-dir` и `--log-level` - папка и уровень логов.
 - `--no-prompt` - не ждать ENTER при завершении.
 - `--disable-failsafe` - отключить штатную защиту `pyautogui`.
+
+## Конфиг и логи
+
+Основные значения по умолчанию лежат в `config.json`. Их можно менять без редактирования Python-кода.
+
+Логи автоматически пишутся в `logs\clicer.log`, с ротацией по размеру.
+
+## Планировщик Windows
+
+Чтобы зарегистрировать ежедневный запуск в Планировщике задач Windows:
+
+```powershell
+.\register-task.ps1 -TaskName AutoClicer -At 09:00
+```
+
+После этого задача будет запускать `run.ps1` каждый день в указанное время.
 
 ## Git
 

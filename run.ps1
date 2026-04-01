@@ -1,6 +1,8 @@
 param(
-    [int]$StartupDelay = 5,
-    [int]$Cycles = 1,
+    [string]$Config = ".\config.json",
+    [int]$StartupDelay = -1,
+    [int]$Cycles = -1,
+    [string]$LogLevel = "",
     [switch]$NoPrompt
 )
 
@@ -13,9 +15,20 @@ if (-not (Test-Path ".\.venv\Scripts\python.exe")) {
 
 $args = @(
     ".\clicer.py",
-    "--startup-delay", $StartupDelay,
-    "--cycles", $Cycles
+    "--config", $Config
 )
+
+if ($StartupDelay -ge 0) {
+    $args += @("--startup-delay", $StartupDelay)
+}
+
+if ($Cycles -gt 0) {
+    $args += @("--cycles", $Cycles)
+}
+
+if ($LogLevel) {
+    $args += @("--log-level", $LogLevel)
+}
 
 if ($NoPrompt) {
     $args += "--no-prompt"

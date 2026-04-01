@@ -1,0 +1,13 @@
+{
+  "startup_delay": 5,
+  "cycles": 1,
+  "wait_min": 40,
+  "wait_max": 110,
+  "read_steps_min": 10,
+  "read_steps_max": 18,
+  "failsafe_enabled": true,
+  "prompt_on_exit": false,
+  "log_dir": "logs",
+  "log_file": "clicer.log",
+  "log_level": "INFO"
+}
