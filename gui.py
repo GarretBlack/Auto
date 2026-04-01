@@ -48,7 +48,7 @@ FIELDS = {
     "switch_tab": [
         ("label", "Название", "str"),
         ("enabled", "Включено", "bool"),
-        ("switch_mode", "Режим переключения", "mapped_combo", (("ctrl_tab", "Ctrl+Tab"), ("alt_tab_delay", "Alt+Tab с задержкой"))),
+        ("switch_mode", "Режим переключения", "mapped_combo", (("ctrl_tab", "Ctrl+Tab"), ("ctrl_tab_delay", "Ctrl+Tab с задержкой"), ("alt_tab_delay", "Alt+Tab с задержкой"))),
         ("repeat_min", "Повтор мин", "int"),
         ("repeat_max", "Повтор макс", "int"),
         ("hold_before_tab_min", "Удержание Alt до Tab мин", "float"),

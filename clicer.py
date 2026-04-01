@@ -488,8 +488,9 @@ def switch_tab_with_mode(action: dict[str, Any], config: ScriptConfig) -> bool:
         if timer_reached(config) or check_panic_exit(config):
             return True
 
-        if switch_mode == "alt_tab_delay":
-            pyautogui.keyDown("alt")
+        if switch_mode in {"alt_tab_delay", "ctrl_tab_delay"}:
+            modifier = "alt" if switch_mode == "alt_tab_delay" else "ctrl"
+            pyautogui.keyDown(modifier)
             try:
                 before_delay = random_float(action.get("hold_before_tab_min", 0.15), action.get("hold_before_tab_max", 0.3))
                 if sleep_with_checks(before_delay, config, step=0.05):
@@ -499,7 +500,7 @@ def switch_tab_with_mode(action: dict[str, Any], config: ScriptConfig) -> bool:
                 if sleep_with_checks(after_delay, config, step=0.05):
                     return True
             finally:
-                pyautogui.keyUp("alt")
+                pyautogui.keyUp(modifier)
         else:
             pyautogui.hotkey("ctrl", "tab")
 
