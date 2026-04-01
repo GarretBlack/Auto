@@ -2,6 +2,13 @@
 
 Локальный Python-проект для автоматизации действий через `pyautogui` с настраиваемым сценарием и графическим интерфейсом.
 
+## Готовый установщик
+
+В репозитории хранится готовый установщик Windows, который можно скачать без локальной сборки:
+
+- `installer\EmulationWorkSetup.exe` - копия актуального установщика, добавляемая в репозиторий.
+- GitHub: `https://github.com/GarretBlack/Auto/blob/main/installer/EmulationWorkSetup.exe`
+
 ## Что внутри
 
 - `clicer.py` - движок исполнения сценария из `config.json`.
@@ -83,10 +90,3 @@
 - логи: `%LOCALAPPDATA%\EmulationWork\logs\`
 
 Установщик ставит приложение в профиль текущего пользователя, поэтому администраторские права не требуются.
-
-## Готовый установщик
-
-В репозитории хранится готовый установщик Windows, который можно скачать без локальной сборки:
-
-- `installer\EmulationWorkSetup.exe` - копия актуального установщика, добавляемая в репозиторий.
-- GitHub: `https://github.com/GarretBlack/Auto/blob/main/installer/EmulationWorkSetup.exe`
