@@ -191,6 +191,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "run_mode": "cycles",
     "cycles": 1,
     "timer_minutes": 60.0,
+    "randomize_actions": False,
     "failsafe_enabled": True,
     "prompt_on_exit": False,
     "log_dir": "logs",
@@ -206,6 +207,7 @@ DEFAULT_CONFIG_PATH = ensure_user_config(DEFAULT_CONFIG)
 class ScriptConfig:
     startup_delay: int
     run_mode: str
+    randomize_actions: bool
     failsafe_enabled: bool
     prompt_on_exit: bool
     cycle_limit: int | None
@@ -292,6 +294,7 @@ def build_config(args: argparse.Namespace) -> ScriptConfig:
     return ScriptConfig(
         startup_delay=startup_delay,
         run_mode=run_mode,
+        randomize_actions=bool(raw_config.get("randomize_actions", False)),
         failsafe_enabled=bool(raw_config.get("failsafe_enabled", True)),
         prompt_on_exit=bool(raw_config.get("prompt_on_exit", False)),
         cycle_limit=int(cycles) if run_mode == "cycles" and cycles not in (None, "") else None,
@@ -594,6 +597,10 @@ def run(config: ScriptConfig) -> tuple[int, int, float]:
         LOGGER.info("Режим работы: бесконечная работа.")
     else:
         LOGGER.info("Режим работы: по таймеру (%.1f мин).", config.timer_minutes or 0.0)
+    LOGGER.info(
+        "Порядок действий: %s.",
+        "случайный в каждом цикле" if config.randomize_actions else "по списку",
+    )
     LOGGER.info("Подготовка %s секунд. Разверните нужное окно.", config.startup_delay)
 
     if sleep_with_checks(config.startup_delay, config):
@@ -609,13 +616,24 @@ def run(config: ScriptConfig) -> tuple[int, int, float]:
         total_cycles += 1
         LOGGER.info(">>> ЦИКЛ № %s <<<", total_cycles)
 
-        for action in config.actions:
+        for action in get_cycle_actions(config):
             if timer_reached(config):
                 return total_cycles, count_enabled_actions(config.actions), time.time() - start_time
             if execute_action(action, config):
                 return total_cycles, count_enabled_actions(config.actions), time.time() - start_time
 
     return total_cycles, count_enabled_actions(config.actions), time.time() - start_time
+
+
+def get_cycle_actions(config: ScriptConfig) -> list[dict[str, Any]]:
+    enabled_actions = [action for action in config.actions if action.get("enabled", True)]
+    if not config.randomize_actions:
+        return enabled_actions
+
+    cycle_wait_actions = [action for action in enabled_actions if action.get("type") == "wait"]
+    randomized_actions = [action for action in enabled_actions if action.get("type") != "wait"]
+    random.shuffle(randomized_actions)
+    return randomized_actions + cycle_wait_actions
 
 
 def count_enabled_actions(actions: list[dict[str, Any]]) -> int:

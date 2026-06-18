@@ -3,6 +3,7 @@
   "run_mode": "cycles",
   "cycles": 1,
   "timer_minutes": 60.0,
+  "randomize_actions": false,
   "failsafe_enabled": true,
   "prompt_on_exit": false,
   "log_dir": "logs",

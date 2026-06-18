@@ -299,6 +299,7 @@ class App:
             "run_mode": tk.StringVar(value=RUN_MODE_LABELS["cycles"]),
             "cycles": tk.StringVar(),
             "timer_minutes": tk.StringVar(),
+            "randomize_actions": tk.BooleanVar(),
             "log_dir": tk.StringVar(),
             "log_file": tk.StringVar(),
             "log_level": tk.StringVar(),
@@ -396,8 +397,13 @@ class App:
         ttk.Checkbutton(form, text="Включить FailSafe", variable=self.vars["failsafe_enabled"]).grid(
             row=7, column=0, columnspan=2, sticky="w", pady=(10, 4)
         )
+        ttk.Checkbutton(
+            form,
+            text="Случайный порядок действий в цикле",
+            variable=self.vars["randomize_actions"],
+        ).grid(row=8, column=0, columnspan=2, sticky="w")
         ttk.Checkbutton(form, text="Показывать ENTER после завершения", variable=self.vars["prompt_on_exit"]).grid(
-            row=8, column=0, columnspan=2, sticky="w"
+            row=9, column=0, columnspan=2, sticky="w"
         )
 
         scenario.columnconfigure(0, weight=1)
@@ -496,6 +502,7 @@ class App:
         self.vars["run_mode"].set(RUN_MODE_LABELS.get(str(cfg.get("run_mode", "cycles")), RUN_MODE_LABELS["cycles"]))
         self.vars["cycles"].set("" if cfg.get("cycles") is None else str(cfg.get("cycles")))
         self.vars["timer_minutes"].set("" if cfg.get("timer_minutes") is None else str(cfg.get("timer_minutes")))
+        self.vars["randomize_actions"].set(bool(cfg.get("randomize_actions", False)))
         self.vars["log_dir"].set(str(cfg.get("log_dir", "logs")))
         self.vars["log_file"].set(str(cfg.get("log_file", "clicer.log")))
         self.vars["log_level"].set(str(cfg.get("log_level", "INFO")).upper())
@@ -520,6 +527,7 @@ class App:
             "run_mode": run_mode,
             "cycles": self.to_optional_int(self.vars["cycles"].get(), "Количество циклов"),
             "timer_minutes": self.to_optional_float(self.vars["timer_minutes"].get(), "Время работы"),
+            "randomize_actions": self.vars["randomize_actions"].get(),
             "log_dir": self.vars["log_dir"].get().strip() or "logs",
             "log_file": self.vars["log_file"].get().strip() or "clicer.log",
             "log_level": (self.vars["log_level"].get().strip() or "INFO").upper(),
