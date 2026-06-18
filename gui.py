@@ -92,7 +92,6 @@ FIELDS = {
         ("enabled", "Включено", "bool"),
         ("x_margin", "Отступ X", "int"),
         ("y_margin", "Отступ Y", "int"),
-        ("human_like", "Человеческая имитация", "bool"),
         ("duration_min", "Длит. мин", "float"),
         ("duration_max", "Длит. макс", "float"),
     ],

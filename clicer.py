@@ -67,9 +67,8 @@ ACTION_TEMPLATES: dict[str, dict[str, Any]] = {
         "enabled": True,
         "x_margin": 100,
         "y_margin": 100,
-        "human_like": True,
         "duration_min": 0.8,
-        "duration_max": 1.4,
+        "duration_max": 1.5,
     },
     "mouse_move": {
         "type": "mouse_move",
@@ -167,9 +166,8 @@ DEFAULT_ACTIONS = [
         "label": "Сменить фокус мыши",
         "x_margin": 150,
         "y_margin": 120,
-        "human_like": True,
         "duration_min": 0.8,
-        "duration_max": 1.4,
+        "duration_max": 1.5,
     },
     {
         "type": "keypress",
@@ -542,10 +540,8 @@ def execute_action(action: dict[str, Any], config: ScriptConfig) -> bool:
 
     if action_type == "move_random":
         target_x, target_y = get_safe_point(action)
-        duration = random_float(action.get("duration_min", 0.8), action.get("duration_max", 1.4))
-        if action.get("human_like", False):
-            return human_like_move(target_x, target_y, duration, config)
-        return straight_move(target_x, target_y, duration, config)
+        duration = random_float(action.get("duration_min", 0.8), action.get("duration_max", 1.5))
+        return human_move(target_x, target_y, duration, config)
 
     if action_type == "mouse_move":
         target_x = int(action.get("x", 0))
