@@ -64,15 +64,15 @@ FIELDS = {
         ("enabled", "Включено", "bool"),
         ("repeat_min", "Повтор мин", "int"),
         ("repeat_max", "Повтор макс", "int"),
-        ("amount_min", "Скролл мин", "int"),
-        ("amount_max", "Скролл макс", "int"),
+        ("amount_min", "Скролл мин", "signed_int"),
+        ("amount_max", "Скролл макс", "signed_int"),
         ("sleep_min", "Пауза мин", "float"),
         ("sleep_max", "Пауза макс", "float"),
         ("micro_move_chance", "Шанс микродвижения", "float"),
-        ("micro_move_x_min", "Смещение X мин", "int"),
-        ("micro_move_x_max", "Смещение X макс", "int"),
-        ("micro_move_y_min", "Смещение Y мин", "int"),
-        ("micro_move_y_max", "Смещение Y макс", "int"),
+        ("micro_move_x_min", "Смещение X мин", "signed_int"),
+        ("micro_move_x_max", "Смещение X макс", "signed_int"),
+        ("micro_move_y_min", "Смещение Y мин", "signed_int"),
+        ("micro_move_y_max", "Смещение Y макс", "signed_int"),
         ("micro_move_duration_min", "Длит. микродв. мин", "float"),
         ("micro_move_duration_max", "Длит. микродв. макс", "float"),
     ],
@@ -662,6 +662,8 @@ class App:
             return text
         if kind == "int":
             return self.to_int(text, label, False)
+        if kind == "signed_int":
+            return self.to_signed_int(text, label)
         if kind == "optional_int":
             return None if not text else self.to_int(text, label, False)
         if kind == "float":
@@ -861,6 +863,13 @@ class App:
     def to_optional_int(value, label):
         value = value.strip()
         return None if not value else App.to_int(value, label, False)
+
+    @staticmethod
+    def to_signed_int(value, label):
+        try:
+            return int(value)
+        except ValueError as exc:
+            raise ValueError(f"{label}: нужно целое число.") from exc
 
     @staticmethod
     def to_float(value, label):
