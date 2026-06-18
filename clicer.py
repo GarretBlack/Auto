@@ -3,6 +3,7 @@ import copy
 import json
 import logging
 import random
+import string
 import sys
 import time
 import traceback
@@ -96,6 +97,16 @@ ACTION_TEMPLATES: dict[str, dict[str, Any]] = {
         "key": "shift",
         "sleep_after_min": 0.0,
         "sleep_after_max": 0.1,
+    },
+    "random_text": {
+        "type": "random_text",
+        "label": "Ввести случайный текст",
+        "enabled": True,
+        "length": 12,
+        "interval_min": 0.03,
+        "interval_max": 0.12,
+        "sleep_after_min": 0.0,
+        "sleep_after_max": 0.2,
     },
     "hotkey": {
         "type": "hotkey",
@@ -396,6 +407,11 @@ def random_int(min_value: int, max_value: int) -> int:
     return random.randint(int(min_value), int(max_value))
 
 
+def generate_random_text(length: int) -> str:
+    alphabet = string.ascii_lowercase + string.digits
+    return "".join(random.choice(alphabet) for _ in range(length))
+
+
 def sleep_with_checks(duration: float, config: ScriptConfig, step: float = 0.2) -> bool:
     remaining = max(0.0, float(duration))
     while remaining > 0:
@@ -565,6 +581,15 @@ def execute_action(action: dict[str, Any], config: ScriptConfig) -> bool:
     if action_type == "keypress":
         pyautogui.press(str(action.get("key", "shift")))
         return sleep_with_checks(random_float(action.get("sleep_after_min", 0.0), action.get("sleep_after_max", 0.0)), config)
+
+    if action_type == "random_text":
+        length = int(action.get("length", 12))
+        if length <= 0:
+            raise ValueError("Для действия random_text длина должна быть больше нуля.")
+        text = generate_random_text(length)
+        interval = random_float(action.get("interval_min", 0.03), action.get("interval_max", 0.12))
+        pyautogui.write(text, interval=interval)
+        return sleep_with_checks(random_float(action.get("sleep_after_min", 0.0), action.get("sleep_after_max", 0.2)), config)
 
     if action_type == "hotkey":
         keys = action.get("keys", [])

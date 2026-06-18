@@ -34,6 +34,7 @@ TYPE_LABELS = {
     "mouse_move": "Перемещение мыши",
     "click": "Клик мышью",
     "keypress": "Клавиша",
+    "random_text": "Случайный текст",
     "hotkey": "Горячая клавиша",
 }
 
@@ -118,6 +119,15 @@ FIELDS = {
         ("key", "Клавиша", "str"),
         ("sleep_after_min", "Пауза мин", "float"),
         ("sleep_after_max", "Пауза макс", "float"),
+    ],
+    "random_text": [
+        ("label", "Название", "str"),
+        ("enabled", "Включено", "bool"),
+        ("length", "Количество символов", "int"),
+        ("interval_min", "Интервал ввода мин", "float"),
+        ("interval_max", "Интервал ввода макс", "float"),
+        ("sleep_after_min", "Пауза после мин", "float"),
+        ("sleep_after_max", "Пауза после макс", "float"),
     ],
     "hotkey": [
         ("label", "Название", "str"),
@@ -677,8 +687,13 @@ class App:
                 raise ValueError("sleep_min не может быть больше sleep_max.")
             if action["micro_move_duration_min"] > action["micro_move_duration_max"]:
                 raise ValueError("Минимальная длительность микродвижения больше максимальной.")
-        if action["type"] in {"keypress", "hotkey"} and action["sleep_after_min"] > action["sleep_after_max"]:
+        if action["type"] in {"keypress", "hotkey", "random_text"} and action["sleep_after_min"] > action["sleep_after_max"]:
             raise ValueError("Минимальная пауза после действия больше максимальной.")
+        if action["type"] == "random_text":
+            if action["length"] <= 0:
+                raise ValueError("Количество символов должно быть больше нуля.")
+            if action["interval_min"] > action["interval_max"]:
+                raise ValueError("Минимальный интервал ввода больше максимального.")
         if action["type"] in {"move_random", "mouse_move"} and action["duration_min"] > action["duration_max"]:
             raise ValueError("Минимальная длительность движения больше максимальной.")
         if action["type"] == "click" and action["clicks"] <= 0:
